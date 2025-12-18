@@ -23,6 +23,9 @@ export class MainView {
     // Ajouter la navbar au document
     document.body.appendChild(this.navbar.getElement());
     
+    // Initialiser la navbar (attacher les écouteurs d'événements)
+    this.navbar.initialize();
+    
     // Ajouter le conteneur de contenu au document
     document.body.appendChild(this.contentContainer);
   }
