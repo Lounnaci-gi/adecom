@@ -9,6 +9,9 @@ import config from './config';
 // Importer l'API
 import { getDbfFiles } from './api';
 
+// Importer la vue principale
+import { MainView } from './views/MainView';
+
 // État de la connexion
 let dbfConnectionStatus = false;
 let dbfFiles: string[] = [];
@@ -38,29 +41,19 @@ async function checkDbfConnection() {
 
 // Initialiser la vérification
 checkDbfConnection().then(() => {
-  // Mettre à jour l'interface utilisateur
-  document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
-    <div>
-      <a href="https://vite.dev" target="_blank">
-        <img src="${viteLogo}" class="logo" alt="Vite logo" />
-      </a>
-      <a href="https://www.typescriptlang.org/" target="_blank">
-        <img src="${typescriptLogo}" class="logo vanilla" alt="TypeScript logo" />
-      </a>
-      <h1>Vite + TypeScript</h1>
-      <div class="connection-status">
-        <span class="status-text">Connexion DBF: </span>
-        <span class="status-icon ${dbfConnectionStatus ? 'success' : 'error'}"></span>
-        <span class="status-label">${dbfConnectionStatus ? 'Connecté' : 'Déconnecté'}</span>
-      </div>
-      <div class="card">
-        <button id="counter" type="button"></button>
-      </div>
-      <p class="read-the-docs">
-        Click on the Vite and TypeScript logos to learn more
-      </p>
+  // Créer la vue principale avec navbar et dashboard
+  const mainView = new MainView();
+  
+  // Mettre à jour l'interface utilisateur avec le statut de connexion
+  const connectionStatusDiv = document.createElement('div');
+  connectionStatusDiv.className = 'connection-status-popup';
+  connectionStatusDiv.innerHTML = `
+    <div class="connection-status-content">
+      <span class="status-text">Connexion DBF: </span>
+      <span class="status-icon ${dbfConnectionStatus ? 'success' : 'error'}"></span>
+      <span class="status-label">${dbfConnectionStatus ? 'Connecté' : 'Déconnecté'}</span>
     </div>
-  `
-
-  setupCounter(document.querySelector<HTMLButtonElement>('#counter')!)
+  `;
+  
+  document.body.appendChild(connectionStatusDiv);
 });

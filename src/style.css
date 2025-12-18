@@ -24,14 +24,23 @@ a:hover {
 
 body {
   margin: 0;
-  display: flex;
-  place-items: center;
+  display: block;
   min-width: 320px;
   min-height: 100vh;
 }
 
 h1 {
-  font-size: 3.2em;
+  font-size: 2em;
+  line-height: 1.1;
+}
+
+h2 {
+  font-size: 1.5em;
+  line-height: 1.1;
+}
+
+h3 {
+  font-size: 1.2em;
   line-height: 1.1;
 }
 
@@ -82,28 +91,325 @@ button:focus-visible {
   outline: 4px auto -webkit-focus-ring-color;
 }
 
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
-  }
-  a:hover {
-    color: #747bff;
-  }
-  button {
-    background-color: #f9f9f9;
-  }
+/* Styles pour les boutons */
+.btn {
+  border-radius: 4px;
+  border: 1px solid transparent;
+  padding: 0.5em 1em;
+  font-size: 0.9em;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-decoration: none;
+  display: inline-block;
+  text-align: center;
 }
 
-/* Styles pour l'affichage du statut de connexion DBF */
-.connection-status {
+.btn-primary {
+  background-color: #646cff;
+  color: white;
+  border-color: #646cff;
+}
+
+.btn-primary:hover {
+  background-color: #535bf2;
+  border-color: #535bf2;
+}
+
+.btn-secondary {
+  background-color: #1a1a1a;
+  color: rgba(255, 255, 255, 0.87);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.btn-secondary:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.btn-danger {
+  background-color: #f44336;
+  color: white;
+  border-color: #f44336;
+}
+
+.btn-danger:hover {
+  background-color: #d32f2f;
+  border-color: #d32f2f;
+}
+
+.btn-small {
+  padding: 0.25em 0.5em;
+  font-size: 0.8em;
+}
+
+/* Styles pour les formulaires */
+input, select {
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 0.5em;
+  font-size: 1em;
+  font-family: inherit;
+  background-color: #1a1a1a;
+  color: rgba(255, 255, 255, 0.87);
+}
+
+input:focus, select:focus {
+  outline: 2px solid #646cff;
+  border-color: #646cff;
+}
+
+.setting-item {
+  margin-bottom: 1rem;
+  text-align: left;
+}
+
+.setting-item label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+}
+
+/* Styles pour les tableaux */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1rem 0;
+}
+
+th, td {
+  padding: 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+th {
+  background-color: rgba(100, 108, 255, 0.1);
+  font-weight: 600;
+}
+
+tr:hover {
+  background-color: rgba(100, 108, 255, 0.05);
+}
+
+/* Styles pour la navbar */
+.navbar {
+  background-color: #1a1a1a;
+  padding: 1rem 0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.navbar-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 2rem;
+}
+
+.navbar-brand h1 {
+  margin: 0;
+  font-size: 1.5rem;
+  color: #646cff;
+}
+
+.navbar-menu {
+  display: flex;
+  list-style: none;
+}
+
+.navbar-item {
+  margin-left: 2rem;
+}
+
+.navbar-link {
+  color: rgba(255, 255, 255, 0.87);
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.2s;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+}
+
+.navbar-link:hover {
+  color: #646cff;
+  background-color: rgba(100, 108, 255, 0.1);
+}
+
+.navbar-link.active {
+  color: #646cff;
+  background-color: rgba(100, 108, 255, 0.2);
+}
+
+/* Styles pour le contenu principal */
+.main-content {
+  max-width: 1200px;
+  margin: 2rem auto;
+  padding: 0 2rem;
+}
+
+/* Styles pour le dashboard */
+.dashboard {
+  width: 100%;
+}
+
+.dashboard-header {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.dashboard-header h2 {
+  margin-bottom: 0.5rem;
+}
+
+.dashboard-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.stat-card {
+  background-color: #1a1a1a;
+  border-radius: 8px;
+  padding: 1.5rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.stat-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+}
+
+.stat-card h3 {
+  margin-top: 0;
+  margin-bottom: 1rem;
+  color: #646cff;
+}
+
+.stat-value {
+  font-size: 2rem;
+  font-weight: bold;
+  margin: 0.5rem 0;
+}
+
+.stat-change {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.stat-change.positive {
+  color: #4caf50;
+}
+
+.stat-change.negative {
+  color: #f44336;
+}
+
+.dashboard-charts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+  gap: 1.5rem;
+}
+
+.chart-container {
+  background-color: #1a1a1a;
+  border-radius: 8px;
+  padding: 1.5rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.chart-container h3 {
+  margin-top: 0;
+  color: #646cff;
+}
+
+.chart-placeholder {
+  height: 300px;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin: 1rem 0;
-  padding: 0.5rem;
+  background-color: rgba(255, 255, 255, 0.05);
   border-radius: 4px;
-  background-color: rgba(255, 255, 255, 0.1);
+  margin-top: 1rem;
+}
+
+.chart-placeholder p {
+  color: rgba(255, 255, 255, 0.5);
+  font-style: italic;
+}
+
+/* Styles pour les pages */
+.articles-view, .clients-view, .settings-view {
+  background-color: #1a1a1a;
+  border-radius: 8px;
+  padding: 2rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.articles-header h2, .clients-header h2, .settings-header h2 {
+  color: #646cff;
+  margin-top: 0;
+}
+
+.articles-actions, .clients-actions {
+  margin: 1.5rem 0;
+  text-align: center;
+}
+
+.articles-table-container, .clients-table-container {
+  overflow-x: auto;
+  margin-top: 1.5rem;
+}
+
+.settings-sections {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+  margin-top: 1.5rem;
+}
+
+.settings-card {
+  background-color: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  padding: 1.5rem;
+}
+
+.settings-card h3 {
+  margin-top: 0;
+  color: #646cff;
+}
+
+.clients-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin: 1.5rem 0;
+}
+
+/* Styles pour l'affichage du statut de connexion DBF */
+.connection-status-popup {
+  position: fixed;
+  bottom: 1rem;
+  right: 1rem;
+  background-color: #1a1a1a;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  display: flex;
+  align-items: center;
+  z-index: 1000;
+}
+
+.connection-status-content {
+  display: flex;
+  align-items: center;
 }
 
 .status-text {
@@ -113,8 +419,8 @@ button:focus-visible {
 
 .status-icon {
   display: inline-block;
-  width: 20px;
-  height: 20px;
+  width: 12px;
+  height: 12px;
   border-radius: 50%;
   margin: 0 0.5rem;
 }
@@ -140,4 +446,83 @@ button:focus-visible {
 
 .status-label.error {
   color: #f44336;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    color: #213547;
+    background-color: #ffffff;
+  }
+  a:hover {
+    color: #747bff;
+  }
+  button, .btn {
+    background-color: #f9f9f9;
+  }
+  
+  .stat-card, .chart-container, .articles-view, .clients-view, .settings-view {
+    background-color: #f9f9f9;
+  }
+  
+  .chart-placeholder {
+    background-color: rgba(0, 0, 0, 0.05);
+  }
+  
+  .navbar {
+    background-color: #f9f9f9;
+  }
+  
+  .navbar-link {
+    color: #213547;
+  }
+  
+  .connection-status-popup {
+    background-color: #f9f9f9;
+  }
+  
+  input, select {
+    background-color: #ffffff;
+    color: #213547;
+    border-color: rgba(0, 0, 0, 0.1);
+  }
+  
+  .settings-card {
+    background-color: rgba(0, 0, 0, 0.05);
+  }
+}
+
+@media (max-width: 768px) {
+  .navbar-container {
+    flex-direction: column;
+    padding: 1rem;
+  }
+  
+  .navbar-brand {
+    margin-bottom: 1rem;
+  }
+  
+  .navbar-menu {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  
+  .navbar-item {
+    margin: 0.5rem;
+  }
+  
+  .dashboard-stats {
+    grid-template-columns: 1fr;
+  }
+  
+  .dashboard-charts {
+    grid-template-columns: 1fr;
+  }
+  
+  .settings-sections {
+    grid-template-columns: 1fr;
+  }
+  
+  .clients-stats {
+    grid-template-columns: 1fr;
+  }
 }
