@@ -436,7 +436,8 @@ app.get('/api/abonnes/count', (req, res) => {
 });
 
 // Route pour obtenir le nombre d'abonnés par type depuis ABONNE.DBF avec jointure TABCODE.DBF
-// Et compter les abonnés résiliés (ETATCPT = '40' dans ABONMENT.DBF)
+// Et compter les abonnés résiliés (ETATCPT = '40' dans ABONMENT.DBF), sans compteur (ETATCPT = '30' dans ABONMENT.DBF)
+// et avec compteur à l'arrêt (ETATCPT = '20' dans ABONMENT.DBF)
 app.get('/api/abonnes/count-by-type', (req, res) => {
   try {
     const abonneFilePath = path.join(DBF_FOLDER_PATH, 'ABONNE.DBF');
@@ -523,8 +524,10 @@ app.get('/api/abonnes/count-by-type', (req, res) => {
       }
     }
     
-    // Créer un index des abonnés résiliés depuis ABONMENT.DBF
+    // Créer un index des abonnés résiliés, sans compteur et avec compteur à l'arrêt depuis ABONMENT.DBF
     const resilieAccounts = new Set();
+    const sansCompteurAccounts = new Set();
+    const compteurArretAccounts = new Set();
     for (let i = 0; i < abonmentHeader.numberOfRecords; i++) {
       const recordOffset = abonmentHeader.headerLength + (i * abonmentHeader.recordLength);
       
@@ -553,12 +556,24 @@ app.get('/api/abonnes/count-by-type', (req, res) => {
         if (etatcpt === '40') {
           resilieAccounts.add(numab);
         }
+        
+        // Si l'état est '30', c'est un abonné sans compteur
+        if (etatcpt === '30') {
+          sansCompteurAccounts.add(numab);
+        }
+        
+        // Si l'état est '20', c'est un abonné avec compteur à l'arrêt
+        if (etatcpt === '20') {
+          compteurArretAccounts.add(numab);
+        }
       }
     }
     
     // Compter les abonnés par type depuis ABONNE.DBF
     const typabonCount = {};
     const typabonResilieCount = {}; // Compteur pour les abonnés résiliés par type
+    const typabonSansCompteurCount = {}; // Compteur pour les abonnés sans compteur par type
+    const typabonCompteurArretCount = {}; // Compteur pour les abonnés avec compteur à l'arrêt par type
     for (let i = 0; i < abonneHeader.numberOfRecords; i++) {
       const recordOffset = abonneHeader.headerLength + (i * abonneHeader.recordLength);
       
@@ -593,23 +608,37 @@ app.get('/api/abonnes/count-by-type', (req, res) => {
           if (resilieAccounts.has(numab)) {
             typabonResilieCount[typabon] = (typabonResilieCount[typabon] || 0) + 1;
           }
+          
+          // Vérifier si cet abonné est sans compteur
+          if (sansCompteurAccounts.has(numab)) {
+            typabonSansCompteurCount[typabon] = (typabonSansCompteurCount[typabon] || 0) + 1;
+          }
+          
+          // Vérifier si cet abonné a le compteur à l'arrêt
+          if (compteurArretAccounts.has(numab)) {
+            typabonCompteurArretCount[typabon] = (typabonCompteurArretCount[typabon] || 0) + 1;
+          }
         }
       }
     }
     
-    // Créer le résultat avec les désignations et les comptes de résiliés
+    // Créer le résultat avec les désignations et les comptes de résiliés, sans compteur et avec compteur à l'arrêt
     const result = Object.keys(typabonCount)
       .map(typabon => ({
         code: typabon,
         designation: typabonDesignations[typabon] || `Type ${typabon}`,
         count: typabonCount[typabon],
-        resilieCount: typabonResilieCount[typabon] || 0
+        resilieCount: typabonResilieCount[typabon] || 0,
+        sansCompteurCount: typabonSansCompteurCount[typabon] || 0,
+        compteurArretCount: typabonCompteurArretCount[typabon] || 0
       }))
       .sort((a, b) => b.count - a.count); // Tri par nombre décroissant
     
     res.json({
       totalCount: Object.values(typabonCount).reduce((sum, count) => sum + count, 0),
       totalResilieCount: Object.values(typabonResilieCount).reduce((sum, count) => sum + count, 0),
+      totalSansCompteurCount: Object.values(typabonSansCompteurCount).reduce((sum, count) => sum + count, 0),
+      totalCompteurArretCount: Object.values(typabonCompteurArretCount).reduce((sum, count) => sum + count, 0),
       types: result
     });
   } catch (error) {

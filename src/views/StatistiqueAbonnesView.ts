@@ -6,6 +6,8 @@ interface AbonneType {
   designation: string;
   count: number;
   resilieCount: number;
+  sansCompteurCount: number;
+  compteurArretCount: number;
 }
 
 export class StatistiqueAbonnesView {
@@ -15,6 +17,8 @@ export class StatistiqueAbonnesView {
   private totalResilieCount: number = 0;
   private compteurArretCount: number = 0;
   private sansCompteurCount: number = 0;
+  private totalSansCompteurCount: number = 0;
+  private totalCompteurArretCount: number = 0;
   private abonnesTypes: AbonneType[] = [];
 
   constructor() {
@@ -33,6 +37,8 @@ export class StatistiqueAbonnesView {
       const result = await DbfService.getAbonnesCountByType();
       this.totalCount = result.totalCount;
       this.totalResilieCount = result.totalResilieCount || 0;
+      this.totalSansCompteurCount = result.totalSansCompteurCount || 0;
+      this.totalCompteurArretCount = result.totalCompteurArretCount || 0;
       this.abonnesTypes = result.types;
       
       // Récupérer le nombre d'abonnés avec compteur à l'arrêt
@@ -166,6 +172,8 @@ export class StatistiqueAbonnesView {
     let typesTableRows = '';
     this.abonnesTypes.forEach(type => {
       const percentageResilie = type.count > 0 ? ((type.resilieCount / type.count) * 100).toFixed(1) : '0';
+      const percentageSansCompteur = type.count > 0 ? ((type.sansCompteurCount / type.count) * 100).toFixed(1) : '0';
+      const percentageCompteurArret = type.count > 0 ? ((type.compteurArretCount / type.count) * 100).toFixed(1) : '0';
       typesTableRows += `
         <tr>
           <td>T${type.code}</td>
@@ -173,6 +181,8 @@ export class StatistiqueAbonnesView {
           <td class="text-right">${type.count.toLocaleString()}</td>
           <td class="text-right">${type.resilieCount.toLocaleString()}</td>
           <td class="text-right ${percentageResilie > 10 ? 'negative' : percentageResilie > 5 ? 'warning' : 'positive'}">${percentageResilie}%</td>
+          <td class="text-right">${type.sansCompteurCount.toLocaleString()} (${percentageSansCompteur}%)</td>
+          <td class="text-right">${type.compteurArretCount.toLocaleString()} (${percentageCompteurArret}%)</td>
         </tr>
       `;
     });
@@ -241,6 +251,8 @@ export class StatistiqueAbonnesView {
                   <th class="text-right">Total</th>
                   <th class="text-right">Résiliés</th>
                   <th class="text-right">Taux de Résiliation</th>
+                  <th class="text-right">Sans Compteur</th>
+                  <th class="text-right">Compteur à l'Arrêt</th>
                 </tr>
               </thead>
               <tbody>
