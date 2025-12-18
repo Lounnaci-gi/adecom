@@ -5,7 +5,7 @@ import fs from 'fs';
 import path from 'path';
 
 // Configuration du dossier DBF
-let DBF_FOLDER_PATH = process.env.DBF_FOLDER_PATH || 'D:/epeor';
+let DBF_FOLDER_PATH = process.env.DBF_FOLDER_PATH || 'F:/epeor';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
