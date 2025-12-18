@@ -1,9 +1,9 @@
 // MainView.ts
 import { Navbar } from '../components/Navbar';
 import { Dashboard } from '../components/Dashboard';
-import { ArticlesView } from './ArticlesView';
 import { ClientsView } from './ClientsView';
 import { SettingsView } from './SettingsView';
+import { StatistiqueAbonnesView } from './StatistiqueAbonnesView';
 
 export class MainView {
   private navbar: Navbar;
@@ -30,21 +30,21 @@ export class MainView {
   private setupEventListeners(): void {
     // Écouter les événements de navigation
     window.addEventListener('navigate', (e: CustomEvent) => {
-      const page = e.detail;
-      this.navigateTo(page);
+      const view = e.detail.view;
+      this.navigateTo(view);
     });
   }
 
-  private navigateTo(page: string): void {
-    switch (page) {
+  private navigateTo(view: string): void {
+    switch (view) {
       case 'dashboard':
         this.showDashboard();
         break;
-      case 'articles':
-        this.showArticles();
-        break;
       case 'clients':
         this.showClients();
+        break;
+      case 'statistique-abonnes':
+        this.showStatistiqueAbonnes();
         break;
       case 'settings':
         this.showSettings();
@@ -52,6 +52,9 @@ export class MainView {
       default:
         this.showDashboard();
     }
+    
+    // Mettre à jour le lien actif dans la navbar
+    this.navbar.setActiveLink(view);
   }
 
   private showDashboard(): void {
@@ -66,18 +69,6 @@ export class MainView {
     this.contentContainer.appendChild(this.currentView);
   }
 
-  private showArticles(): void {
-    // Supprimer la vue actuelle
-    if (this.currentView) {
-      this.contentContainer.removeChild(this.currentView);
-    }
-    
-    // Créer et afficher la page articles
-    const articlesView = new ArticlesView();
-    this.currentView = articlesView.getElement();
-    this.contentContainer.appendChild(this.currentView);
-  }
-
   private showClients(): void {
     // Supprimer la vue actuelle
     if (this.currentView) {
@@ -87,6 +78,18 @@ export class MainView {
     // Créer et afficher la page clients
     const clientsView = new ClientsView();
     this.currentView = clientsView.getElement();
+    this.contentContainer.appendChild(this.currentView);
+  }
+
+  private showStatistiqueAbonnes(): void {
+    // Supprimer la vue actuelle
+    if (this.currentView) {
+      this.contentContainer.removeChild(this.currentView);
+    }
+    
+    // Créer et afficher la page statistique abonnés
+    const statistiqueAbonnesView = new StatistiqueAbonnesView();
+    this.currentView = statistiqueAbonnesView.getElement();
     this.contentContainer.appendChild(this.currentView);
   }
 

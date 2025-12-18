@@ -465,11 +465,54 @@ tr:hover {
 /* Styles pour les cartes d'abonnés par type */
 .abonnes-types-card {
   grid-column: span 2;
+  max-height: 400px;
+  overflow-y: auto;
 }
 
 .abonnes-types-card h3 {
   margin-top: 0;
   color: #646cff;
+}
+
+.types-header {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.5rem 0;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.2);
+  font-weight: bold;
+}
+
+.type-code-header, .type-code {
+  min-width: 40px;
+  padding-right: 10px;
+}
+
+.type-designation-header, .type-designation {
+  flex-grow: 2;
+  margin: 0 10px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.type-count-header, .type-count {
+  text-align: right;
+  min-width: 80px;
+  padding: 0 10px;
+}
+
+.type-resilie-header, .type-resilie-count {
+  text-align: right;
+  min-width: 80px;
+  padding: 0 10px;
+  color: #f44336;
+}
+
+.type-resilie-percentage-header, .type-resilie-percentage {
+  text-align: right;
+  min-width: 60px;
+  padding-left: 10px;
+  color: #4caf50; /* Vert pour le taux */
 }
 
 .types-list {
@@ -485,6 +528,10 @@ tr:hover {
 
 .type-item.empty {
   height: 2.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255, 255, 255, 0.5);
 }
 
 .type-item:last-child {
@@ -494,21 +541,147 @@ tr:hover {
 .type-code {
   font-weight: bold;
   color: #646cff;
-  min-width: 30px;
 }
 
-.type-designation {
-  flex-grow: 1;
-  margin: 0 1rem;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.type-count {
+.type-resilie-count {
   font-weight: bold;
+  color: #f44336;
+}
+
+.type-resilie-percentage {
+  font-weight: bold;
+  color: #4caf50; /* Vert pour le taux */
+}
+
+/* Styles pour la vue Statistique Abonnés */
+.statistique-abonnes-view {
+  padding: 2rem;
+}
+
+.statistique-abonnes-header h2 {
+  color: #646cff;
+  margin-bottom: 0.5rem;
+}
+
+.statistique-abonnes-header p {
+  color: #888;
+  margin-top: 0;
+}
+
+.statistique-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.chart-container {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.chart-container h3 {
+  margin-top: 0;
+  color: #646cff;
+}
+
+.chart-placeholder {
+  text-align: center;
+  padding: 1rem;
+}
+
+.chart-example {
+  margin: 1rem 0;
+  white-space: nowrap;
+  overflow-x: auto;
+}
+
+.chart-legend {
+  list-style: none;
+  padding: 0;
+  text-align: left;
+  display: inline-block;
+  margin-top: 1rem;
+}
+
+.legend-color {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  margin-right: 8px;
+}
+
+.details-section {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.details-section h3 {
+  margin-top: 0;
+  color: #646cff;
+}
+
+/* Styles pour les cartes d'abonnés par type dans StatistiqueAbonnesView */
+.table-responsive {
+  overflow-x: auto;
+}
+
+.abonnes-types-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 600px;
+}
+
+.abonnes-types-table th,
+.abonnes-types-table td {
+  padding: 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.abonnes-types-table th {
+  background: rgba(100, 108, 255, 0.1);
+  font-weight: bold;
+}
+
+.text-right {
   text-align: right;
-  min-width: 60px;
+}
+
+.positive {
+  color: #4caf50;
+}
+
+.negative {
+  color: #f44336;
+}
+
+.warning {
+  color: #ff9800;
+}
+
+.loading-container {
+  text-align: center;
+  padding: 2rem;
+}
+
+.loading-spinner {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border: 3px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: #646cff;
+  animation: spin 1s ease-in-out infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 
 @media (prefers-color-scheme: light) {
@@ -552,6 +725,90 @@ tr:hover {
   .settings-card {
     background-color: rgba(0, 0, 0, 0.05);
   }
+  
+  .type-item {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  }
+  
+  .type-item.empty {
+    color: rgba(0, 0, 0, 0.5);
+  }
+  
+  .types-header {
+    border-bottom: 2px solid rgba(0, 0, 0, 0.2);
+  }
+  
+  .type-resilie-header, .type-resilie-count {
+    color: #d32f2f;
+  }
+  
+  .type-resilie-percentage-header, .type-resilie-percentage {
+    color: #388e3c; /* Vert plus foncé pour le mode clair */
+  }
+  
+  .details-table th,
+  .details-table td {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  }
+  
+  .details-table th {
+    background: rgba(100, 108, 255, 0.05);
+  }
+  
+  .chart-container,
+  .details-section {
+    background: rgba(0, 0, 0, 0.05);
+  }
+  
+  .positive {
+    color: #388e3c;
+  }
+  
+  .negative {
+    color: #d32f2f;
+  }
+  
+  .warning {
+    color: #f57c00;
+  }
+  
+  .details-table th,
+  .details-table td,
+  .types-list th,
+  .types-list td {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  }
+  
+  .details-table th,
+  .types-list th {
+    background: rgba(100, 108, 255, 0.05);
+  }
+  
+  .chart-container,
+  .details-section {
+    background: rgba(0, 0, 0, 0.05);
+  }
+  
+  .positive {
+    color: #388e3c;
+  }
+  
+  .negative {
+    color: #d32f2f;
+  }
+  
+  .warning {
+    color: #f57c00;
+  }
+  
+  .type-resilie-header, .type-resilie-count,
+  .type-resilie-percentage-header, .type-resilie-percentage {
+    color: #d32f2f;
+  }
+  
+  .type-resilie-percentage-header, .type-resilie-percentage {
+    color: #388e3c; /* Vert plus foncé pour le mode clair */
+  }
 }
 
 @media (max-width: 768px) {
@@ -571,6 +828,34 @@ tr:hover {
   
   .navbar-item {
     margin: 0.5rem;
+  }
+  
+  .abonnes-types-card {
+    grid-column: span 1;
+  }
+  
+  .types-header, .type-item {
+    font-size: 0.9em;
+  }
+  
+  .type-code-header, .type-code {
+    min-width: 30px;
+  }
+  
+  .type-designation-header, .type-designation {
+    margin: 0 5px;
+  }
+  
+  .type-count-header, .type-count {
+    min-width: 60px;
+  }
+  
+  .type-resilie-header, .type-resilie-count {
+    min-width: 60px;
+  }
+  
+  .type-resilie-percentage-header, .type-resilie-percentage {
+    min-width: 50px;
   }
   
   .dashboard-stats {

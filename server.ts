@@ -436,10 +436,12 @@ app.get('/api/abonnes/count', (req, res) => {
 });
 
 // Route pour obtenir le nombre d'abonnés par type depuis ABONNE.DBF avec jointure TABCODE.DBF
+// Et compter les abonnés résiliés (ETATCPT = '40' dans ABONMENT.DBF)
 app.get('/api/abonnes/count-by-type', (req, res) => {
   try {
     const abonneFilePath = path.join(DBF_FOLDER_PATH, 'ABONNE.DBF');
     const tabcodeFilePath = path.join(DBF_FOLDER_PATH, 'TABCODE.DBF');
+    const abonmentFilePath = path.join(DBF_FOLDER_PATH, 'ABONMENT.DBF');
     
     // Vérifier si les fichiers existent
     if (!fs.existsSync(abonneFilePath)) {
@@ -451,6 +453,12 @@ app.get('/api/abonnes/count-by-type', (req, res) => {
     if (!fs.existsSync(tabcodeFilePath)) {
       return res.status(404).json({ 
         error: 'Fichier TABCODE.DBF non trouvé'
+      });
+    }
+    
+    if (!fs.existsSync(abonmentFilePath)) {
+      return res.status(404).json({ 
+        error: 'Fichier ABONMENT.DBF non trouvé'
       });
     }
     
@@ -475,6 +483,17 @@ app.get('/api/abonnes/count-by-type', (req, res) => {
       recordLength: tabcodeHeaderBuffer.readUInt16LE(10)
     };
     fs.closeSync(tabcodeFd);
+    
+    // Lire les informations d'en-tête d'ABONMENT.DBF
+    const abonmentHeaderBuffer = Buffer.alloc(32);
+    const abonmentFd = fs.openSync(abonmentFilePath, 'r');
+    fs.readSync(abonmentFd, abonmentHeaderBuffer, 0, 32, 0);
+    const abonmentHeader = {
+      numberOfRecords: abonmentHeaderBuffer.readUInt32LE(4),
+      headerLength: abonmentHeaderBuffer.readUInt16LE(8),
+      recordLength: abonmentHeaderBuffer.readUInt16LE(10)
+    };
+    fs.closeSync(abonmentFd);
     
     // Lire tous les codes de type d'abonné avec leurs désignations depuis TABCODE.DBF
     const typabonDesignations = {};
@@ -504,8 +523,42 @@ app.get('/api/abonnes/count-by-type', (req, res) => {
       }
     }
     
+    // Créer un index des abonnés résiliés depuis ABONMENT.DBF
+    const resilieAccounts = new Set();
+    for (let i = 0; i < abonmentHeader.numberOfRecords; i++) {
+      const recordOffset = abonmentHeader.headerLength + (i * abonmentHeader.recordLength);
+      
+      const recordBuffer = Buffer.alloc(abonmentHeader.recordLength + 10);
+      const fd = fs.openSync(abonmentFilePath, 'r');
+      fs.readSync(fd, recordBuffer, 0, abonmentHeader.recordLength, recordOffset);
+      fs.closeSync(fd);
+      
+      // Extraire les données de l'enregistrement ABONMENT
+      const isDeleted = recordBuffer.readUInt8(0) === 0x2A;
+      if (!isDeleted) {
+        // Calculer l'offset pour le champ NUMAB (champ 1) et ETATCPT (champ 5)
+        let fieldOffset = 1; // +1 pour ignorer l'indicateur de suppression
+        
+        // NUMAB (champ 1) - 6 caractères
+        const numab = recordBuffer.subarray(fieldOffset, fieldOffset + 6).toString('utf-8').trim();
+        fieldOffset += 6;
+        
+        // Passer les champs 2, 3, 4
+        fieldOffset += 15 + 8 + 3; // NUMSER (15) + DATEINST (8) + DIAMETRE (3)
+        
+        // ETATCPT (champ 5) - 2 caractères
+        const etatcpt = recordBuffer.subarray(fieldOffset, fieldOffset + 2).toString('utf-8').trim();
+        
+        // Si l'état est '40', c'est un abonné résilié
+        if (etatcpt === '40') {
+          resilieAccounts.add(numab);
+        }
+      }
+    }
+    
     // Compter les abonnés par type depuis ABONNE.DBF
     const typabonCount = {};
+    const typabonResilieCount = {}; // Compteur pour les abonnés résiliés par type
     for (let i = 0; i < abonneHeader.numberOfRecords; i++) {
       const recordOffset = abonneHeader.headerLength + (i * abonneHeader.recordLength);
       
@@ -517,29 +570,46 @@ app.get('/api/abonnes/count-by-type', (req, res) => {
       // Extraire les données de l'enregistrement ABONNE
       const isDeleted = recordBuffer.readUInt8(0) === 0x2A;
       if (!isDeleted) {
-        // Calculer l'offset pour le champ TYPABON (champ 12)
-        // Somme des longueurs des champs précédents: 2+2+3+6+30+4+10+3+2+2+4 = 68
-        let fieldOffset = 1 + 68; // +1 pour l'indicateur de suppression + 68 pour les champs précédents
+        // Calculer l'offset pour le champ NUMAB (champ 4) et TYPABON (champ 12)
+        let fieldOffset = 1; // +1 pour ignorer l'indicateur de suppression
         
+        // Passer les champs 1, 2, 3
+        fieldOffset += 2 + 2 + 3; // UNITE (2) + SECTEUR (2) + TOURNEE (3)
+        
+        // NUMAB (champ 4) - 6 caractères
+        const numab = recordBuffer.subarray(fieldOffset, fieldOffset + 6).toString('utf-8').trim();
+        fieldOffset += 6;
+        
+        // Passer les champs 5, 6, 7, 8, 9, 10, 11
+        fieldOffset += 30 + 4 + 10 + 3 + 2 + 2 + 4; // RAISOC (30) + CODRUE (4) + BLOC (10) + ENTREE (3) + ETAGE (2) + AILE (2) + NDOM (4)
+        
+        // TYPABON (champ 12) - 2 caractères
         const typabon = recordBuffer.subarray(fieldOffset, fieldOffset + 2).toString('utf-8').trim();
         
         if (typabon) {
           typabonCount[typabon] = (typabonCount[typabon] || 0) + 1;
+          
+          // Vérifier si cet abonné est résilié
+          if (resilieAccounts.has(numab)) {
+            typabonResilieCount[typabon] = (typabonResilieCount[typabon] || 0) + 1;
+          }
         }
       }
     }
     
-    // Créer le résultat avec les désignations
+    // Créer le résultat avec les désignations et les comptes de résiliés
     const result = Object.keys(typabonCount)
       .map(typabon => ({
         code: typabon,
         designation: typabonDesignations[typabon] || `Type ${typabon}`,
-        count: typabonCount[typabon]
+        count: typabonCount[typabon],
+        resilieCount: typabonResilieCount[typabon] || 0
       }))
       .sort((a, b) => b.count - a.count); // Tri par nombre décroissant
     
     res.json({
       totalCount: Object.values(typabonCount).reduce((sum, count) => sum + count, 0),
+      totalResilieCount: Object.values(typabonResilieCount).reduce((sum, count) => sum + count, 0),
       types: result
     });
   } catch (error) {
