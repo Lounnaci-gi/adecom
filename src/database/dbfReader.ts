@@ -6,11 +6,15 @@ import { dbfConfig } from './dbfConnection';
 /**
  * Simule la lecture d'un fichier DBF et retourne des données fictives
  * @param fileName Nom du fichier DBF
+ * @param useIndex Boolean pour indiquer si on utilise l'index
  * @returns Promise<any[]>
  */
-export async function readDbfFile(fileName: string): Promise<any[]> {
+export async function readDbfFile(fileName: string, useIndex: boolean = true): Promise<any[]> {
   try {
-    console.log(`_simulation_ Lecture du fichier ${fileName} depuis ${dbfConfig.folderPath}`);
+    const indexPath = dbfConfig.indexFile ? `${dbfConfig.folderPath}/${dbfConfig.indexFile}` : null;
+    const indexInfo = useIndex && indexPath ? ` avec index ${dbfConfig.indexFile}` : ' sans index';
+    
+    console.log(`_simulation_ Lecture du fichier ${fileName} depuis ${dbfConfig.folderPath}${indexInfo}`);
     
     // Simulation de données DBF
     const simulatedData = [
@@ -21,7 +25,7 @@ export async function readDbfFile(fileName: string): Promise<any[]> {
       { id: 5, nom: 'Exemple 5', valeur: 500 }
     ];
     
-    console.log(`✅ ${simulatedData.length} enregistrements simulés lus depuis ${fileName}`);
+    console.log(`✅ ${simulatedData.length} enregistrements simulés lus depuis ${fileName}${indexInfo}`);
     return simulatedData;
   } catch (error) {
     console.error(`Erreur lors de la simulation de lecture du fichier ${fileName}:`, error);

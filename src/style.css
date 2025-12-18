@@ -1276,6 +1276,38 @@ tr:hover {
   padding: 0.75rem;
   text-align: left;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  transition: background-color 0.2s ease;
+}
+
+.abonnes-types-table th {
+  cursor: pointer;
+  user-select: none;
+  position: relative;
+}
+
+.abonnes-types-table th:hover {
+  background-color: rgba(100, 108, 255, 0.2);
+}
+
+.abonnes-types-table th.sortable::after {
+  content: ' ↕';
+  opacity: 0.5;
+  font-size: 0.8em;
+  margin-left: 0.5rem;
+}
+
+.abonnes-types-table th.sorted-asc::after {
+  content: ' ↑';
+  opacity: 1;
+}
+
+.abonnes-types-table th.sorted-desc::after {
+  content: ' ↓';
+  opacity: 1;
+}
+
+.abonnes-types-table tbody tr:hover td {
+  background-color: rgba(100, 108, 255, 0.05);
 }
 
 .abonnes-types-table th {
@@ -1514,6 +1546,56 @@ tr:hover {
     border-color: var(--primary-color);
     box-shadow: 0 0 0 3px rgba(100, 108, 255, 0.2);
   }
+}
+
+/* Styles spécifiques pour le tableau des abonnés par type */
+[data-theme="light"] .abonnes-types-table th {
+  background: rgba(100, 108, 255, 0.1);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+[data-theme="light"] .abonnes-types-table td {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+[data-theme="light"] .abonnes-types-table th:hover {
+  background-color: rgba(100, 108, 255, 0.15);
+}
+
+[data-theme="light"] .abonnes-types-table tbody tr:hover td {
+  background-color: rgba(100, 108, 255, 0.05);
+}
+
+[data-theme="dark"] .abonnes-types-table th {
+  background: rgba(100, 108, 255, 0.2);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+[data-theme="dark"] .abonnes-types-table td {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+[data-theme="dark"] .abonnes-types-table th:hover {
+  background-color: rgba(100, 108, 255, 0.3);
+}
+
+[data-theme="dark"] .abonnes-types-table tbody tr:hover td {
+  background-color: rgba(100, 108, 255, 0.1);
+}
+
+/* Styles pour les codes de type d'abonné avec couleurs */
+.type-code {
+  font-weight: bold;
+  position: relative;
+  padding-left: 1rem;
+}
+
+.abonnes-types-table tbody tr {
+  transition: all 0.2s ease;
+}
+
+.abonnes-types-table tbody tr:hover {
+  transform: translateX(2px);
 }
 
 @media (max-width: 768px) {

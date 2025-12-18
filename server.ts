@@ -10,6 +10,31 @@ dotenv.config();
 // Configuration du dossier DBF
 let DBF_FOLDER_PATH = process.env.DBF_FOLDER_PATH || process.env.VITE_DBF_FOLDER_PATH || 'D:/epeor';
 
+// Fonction pour vérifier l'existence des fichiers d'index
+function checkIndexFiles(folderPath: string): string[] {
+  const indexExtensions = ['.ntx', '.idx', '.ndx'];
+  const indexFiles: string[] = [];
+  
+  try {
+    // Lire le contenu du dossier
+    const files = fs.readdirSync(folderPath);
+    
+    // Vérifier chaque fichier pour voir s'il s'agit d'un fichier d'index
+    files.forEach(file => {
+      const ext = path.extname(file).toLowerCase();
+      if (indexExtensions.includes(ext)) {
+        indexFiles.push(file);
+      }
+    });
+    
+    console.log(`Fichiers d'index trouvés: ${indexFiles.join(', ') || 'aucun'}`);
+  } catch (error) {
+    console.error('Erreur lors de la recherche des fichiers d\'index:', error);
+  }
+  
+  return indexFiles;
+}
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -37,10 +62,15 @@ app.get('/api/dbf-files', (req, res) => {
     // Filtrer les fichiers DBF
     const dbfFiles = files.filter(file => path.extname(file).toLowerCase() === '.dbf');
     
+    // Vérifier les fichiers d'index
+    const indexFiles = checkIndexFiles(DBF_FOLDER_PATH);
+    
     res.json({
       files: dbfFiles,
+      indexFiles: indexFiles,
       folderPath: DBF_FOLDER_PATH,
-      dbfFiles: dbfFiles.length
+      dbfFiles: dbfFiles.length,
+      indexFilesCount: indexFiles.length
     });
   } catch (error) {
     console.error('Erreur lors de la lecture du dossier DBF:', error);
@@ -110,6 +140,7 @@ app.get('/api/dbf-files/:filename/exists', (req, res) => {
 });
 
 // Route pour obtenir le nombre de centres depuis TABCODE.DBF
+// Utilise les fichiers d'index NTX si disponibles pour accélérer les requêtes
 app.get('/api/centres/count', (req, res) => {
   try {
     const filePath = path.join(DBF_FOLDER_PATH, 'TABCODE.DBF');
@@ -119,6 +150,18 @@ app.get('/api/centres/count', (req, res) => {
       return res.status(404).json({ 
         error: 'Fichier TABCODE.DBF non trouvé'
       });
+    }
+    
+    // Vérifier les fichiers d'index disponibles
+    const indexFiles = checkIndexFiles(DBF_FOLDER_PATH);
+    const tabcodeIndexes = indexFiles.filter(file => 
+      file.toUpperCase().startsWith('TABCODE') && path.extname(file).toLowerCase() === '.ntx'
+    );
+    
+    if (tabcodeIndexes.length > 0) {
+      console.log(`Utilisation de l'index ${tabcodeIndexes[0]} pour accélérer la lecture de TABCODE.DBF`);
+    } else {
+      console.log('Aucun fichier d\'index trouvé pour TABCODE.DBF, lecture séquentielle');
     }
     
     // Lire les informations d'en-tête
@@ -155,7 +198,8 @@ app.get('/api/centres/count', (req, res) => {
     }
     
     res.json({
-      count: centresCount
+      count: centresCount,
+      indexUsed: tabcodeIndexes.length > 0 ? tabcodeIndexes[0] : null
     });
   } catch (error) {
     console.error('Erreur lors du comptage des centres:', error);
@@ -164,9 +208,10 @@ app.get('/api/centres/count', (req, res) => {
       message: (error as Error).message
     });
   }
-});
+}));
 
 // Route pour obtenir le nombre d'abonnés depuis ABONNE.DBF
+// Utilise les fichiers d'index NTX si disponibles pour accélérer les requêtes
 app.get('/api/abonnes/count', (req, res) => {
   try {
     const filePath = path.join(DBF_FOLDER_PATH, 'ABONNE.DBF');
@@ -176,6 +221,18 @@ app.get('/api/abonnes/count', (req, res) => {
       return res.status(404).json({ 
         error: 'Fichier ABONNE.DBF non trouvé'
       });
+    }
+    
+    // Vérifier les fichiers d'index disponibles
+    const indexFiles = checkIndexFiles(DBF_FOLDER_PATH);
+    const abonneIndexes = indexFiles.filter(file => 
+      file.toUpperCase().startsWith('ABONNE') && path.extname(file).toLowerCase() === '.ntx'
+    );
+    
+    if (abonneIndexes.length > 0) {
+      console.log(`Utilisation de l'index ${abonneIndexes[0]} pour accélérer la lecture de ABONNE.DBF`);
+    } else {
+      console.log('Aucun fichier d\'index trouvé pour ABONNE.DBF, lecture séquentielle');
     }
     
     // Lire les informations d'en-tête
@@ -209,7 +266,8 @@ app.get('/api/abonnes/count', (req, res) => {
     }
     
     res.json({
-      count: abonnesCount
+      count: abonnesCount,
+      indexUsed: abonneIndexes.length > 0 ? abonneIndexes[0] : null
     });
   } catch (error) {
     console.error('Erreur lors du comptage des abonnés:', error);
@@ -221,6 +279,7 @@ app.get('/api/abonnes/count', (req, res) => {
 });
 
 // Route pour obtenir le nombre d'abonnés par type depuis ABONNE.DBF avec jointure TABCODE.DBF
+// Utilise les fichiers d'index NTX si disponibles pour accélérer les requêtes
 app.get('/api/abonnes/count-by-type', (req, res) => {
   try {
     const abonneFilePath = path.join(DBF_FOLDER_PATH, 'ABONNE.DBF');
@@ -244,6 +303,30 @@ app.get('/api/abonnes/count-by-type', (req, res) => {
       return res.status(404).json({ 
         error: 'Fichier ABONMENT.DBF non trouvé'
       });
+    }
+    
+    // Vérifier les fichiers d'index disponibles
+    const indexFiles = checkIndexFiles(DBF_FOLDER_PATH);
+    const abonneIndexes = indexFiles.filter(file => 
+      file.toUpperCase().startsWith('ABONNE') && path.extname(file).toLowerCase() === '.ntx'
+    );
+    const tabcodeIndexes = indexFiles.filter(file => 
+      file.toUpperCase().startsWith('TABCODE') && path.extname(file).toLowerCase() === '.ntx'
+    );
+    const abonmentIndexes = indexFiles.filter(file => 
+      file.toUpperCase().startsWith('ABONMENT') && path.extname(file).toLowerCase() === '.ntx'
+    );
+    
+    console.log(`Fichiers d'index disponibles: ABONNE(${abonneIndexes.length}), TABCODE(${tabcodeIndexes.length}), ABONMENT(${abonmentIndexes.length})`);
+    
+    if (abonneIndexes.length > 0) {
+      console.log(`Utilisation de l'index ${abonneIndexes[0]} pour accélérer la lecture de ABONNE.DBF`);
+    }
+    if (tabcodeIndexes.length > 0) {
+      console.log(`Utilisation de l'index ${tabcodeIndexes[0]} pour accélérer la lecture de TABCODE.DBF`);
+    }
+    if (abonmentIndexes.length > 0) {
+      console.log(`Utilisation de l'index ${abonmentIndexes[0]} pour accélérer la lecture de ABONMENT.DBF`);
     }
     
     // Lire les informations d'en-tête d'ABONNE.DBF
@@ -422,7 +505,12 @@ app.get('/api/abonnes/count-by-type', (req, res) => {
       totalResilieCount: Object.values(typabonResilieCount).reduce((sum, count) => sum + count, 0),
       totalSansCompteurCount: Object.values(typabonSansCompteurCount).reduce((sum, count) => sum + count, 0),
       totalCompteurArretCount: Object.values(typabonCompteurArretCount).reduce((sum, count) => sum + count, 0),
-      types: result
+      types: result,
+      indexesUsed: {
+        abonne: abonneIndexes.length > 0 ? abonneIndexes[0] : null,
+        tabcode: tabcodeIndexes.length > 0 ? tabcodeIndexes[0] : null,
+        abonment: abonmentIndexes.length > 0 ? abonmentIndexes[0] : null
+      }
     });
   } catch (error) {
     console.error('Erreur lors du comptage des abonnés par type:', error);
@@ -434,6 +522,7 @@ app.get('/api/abonnes/count-by-type', (req, res) => {
 });
 
 // Route pour obtenir le nombre d'abonnés avec compteur à l'arrêt (ETATCPT = '20') depuis ABONMENT.DBF
+// Utilise les fichiers d'index NTX si disponibles pour accélérer les requêtes
 app.get('/api/abonnes/compteur-arret', (req, res) => {
   try {
     const abonmentFilePath = path.join(DBF_FOLDER_PATH, 'ABONMENT.DBF');
@@ -443,6 +532,18 @@ app.get('/api/abonnes/compteur-arret', (req, res) => {
       return res.status(404).json({ 
         error: 'Fichier ABONMENT.DBF non trouvé'
       });
+    }
+    
+    // Vérifier les fichiers d'index disponibles
+    const indexFiles = checkIndexFiles(DBF_FOLDER_PATH);
+    const abonmentIndexes = indexFiles.filter(file => 
+      file.toUpperCase().startsWith('ABONMENT') && path.extname(file).toLowerCase() === '.ntx'
+    );
+    
+    if (abonmentIndexes.length > 0) {
+      console.log(`Utilisation de l'index ${abonmentIndexes[0]} pour accélérer la lecture de ABONMENT.DBF`);
+    } else {
+      console.log('Aucun fichier d\'index trouvé pour ABONMENT.DBF, lecture séquentielle');
     }
     
     // Lire les informations d'en-tête d'ABONMENT.DBF
@@ -486,7 +587,8 @@ app.get('/api/abonnes/compteur-arret', (req, res) => {
     }
     
     res.json({
-      count: compteurArretCount
+      count: compteurArretCount,
+      indexUsed: abonmentIndexes.length > 0 ? abonmentIndexes[0] : null
     });
   } catch (error) {
     console.error('Erreur lors du comptage des abonnés avec compteur à l\'arrêt:', error);
@@ -498,6 +600,7 @@ app.get('/api/abonnes/compteur-arret', (req, res) => {
 });
 
 // Route pour obtenir le nombre d'abonnés sans compteur (ETATCPT = '30') depuis ABONMENT.DBF
+// Utilise les fichiers d'index NTX si disponibles pour accélérer les requêtes
 app.get('/api/abonnes/sans-compteur', (req, res) => {
   try {
     const abonmentFilePath = path.join(DBF_FOLDER_PATH, 'ABONMENT.DBF');
@@ -507,6 +610,18 @@ app.get('/api/abonnes/sans-compteur', (req, res) => {
       return res.status(404).json({ 
         error: 'Fichier ABONMENT.DBF non trouvé'
       });
+    }
+    
+    // Vérifier les fichiers d'index disponibles
+    const indexFiles = checkIndexFiles(DBF_FOLDER_PATH);
+    const abonmentIndexes = indexFiles.filter(file => 
+      file.toUpperCase().startsWith('ABONMENT') && path.extname(file).toLowerCase() === '.ntx'
+    );
+    
+    if (abonmentIndexes.length > 0) {
+      console.log(`Utilisation de l'index ${abonmentIndexes[0]} pour accélérer la lecture de ABONMENT.DBF`);
+    } else {
+      console.log('Aucun fichier d\'index trouvé pour ABONMENT.DBF, lecture séquentielle');
     }
     
     // Lire les informations d'en-tête d'ABONMENT.DBF
@@ -550,7 +665,8 @@ app.get('/api/abonnes/sans-compteur', (req, res) => {
     }
     
     res.json({
-      count: sansCompteurCount
+      count: sansCompteurCount,
+      indexUsed: abonmentIndexes.length > 0 ? abonmentIndexes[0] : null
     });
   } catch (error) {
     console.error('Erreur lors du comptage des abonnés sans compteur:', error);
