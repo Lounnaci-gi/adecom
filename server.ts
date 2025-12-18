@@ -3,9 +3,12 @@ import express from 'express';
 import cors from 'cors';
 import fs from 'fs';
 import path from 'path';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 // Configuration du dossier DBF
-let DBF_FOLDER_PATH = process.env.DBF_FOLDER_PATH || 'F:/epeor';
+let DBF_FOLDER_PATH = process.env.DBF_FOLDER_PATH || process.env.VITE_DBF_FOLDER_PATH || 'D:/epeor';
 
 const app = express();
 const PORT = process.env.PORT || 3000;

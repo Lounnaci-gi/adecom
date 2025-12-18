@@ -16,6 +16,7 @@ import { MainView } from './views/MainView';
 let dbfConnectionStatus = false;
 let dbfFiles: string[] = [];
 let connectionStatusDiv: HTMLDivElement | null = null;
+let connectionCheckInterval: number | null = null;
 
 // Fonction pour créer/mettre à jour le popup de statut de connexion
 function updateConnectionStatusPopup() {
@@ -66,4 +67,14 @@ async function checkDbfConnection() {
 checkDbfConnection().then(() => {
   // Créer la vue principale avec navbar et dashboard
   const mainView = new MainView();
+  
+  // Vérifier périodiquement la connexion toutes les 30 secondes
+  connectionCheckInterval = window.setInterval(checkDbfConnection, 30000);
+});
+
+// Nettoyer l'intervalle quand la page est fermée
+window.addEventListener('beforeunload', () => {
+  if (connectionCheckInterval) {
+    clearInterval(connectionCheckInterval);
+  }
 });
