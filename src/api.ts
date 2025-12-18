@@ -1,13 +1,15 @@
-// Fonctions pour communiquer avec le backend API
-const API_BASE_URL = 'http://localhost:3000/api';
+// api.ts
+import config from './config';
+
+// URL de base de l'API
+const API_BASE_URL = config.API_BASE_URL || 'http://localhost:3000';
 
 /**
- * Récupère la liste des fichiers DBF
- * @returns Promise<any>
+ * Récupère la liste des fichiers DBF disponibles
  */
 export async function getDbfFiles() {
   try {
-    const response = await fetch(`${API_BASE_URL}/dbf-files`);
+    const response = await fetch(`${API_BASE_URL}/api/dbf-files`);
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
@@ -19,98 +21,12 @@ export async function getDbfFiles() {
 }
 
 /**
- * Récupère les informations sur un fichier DBF
- * @param filename Nom du fichier DBF
- * @returns Promise<any>
- */
-export async function getDbfFileInfo(filename: string) {
-  try {
-    const response = await fetch(`${API_BASE_URL}/dbf-files/${encodeURIComponent(filename)}/info`);
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    return await response.json();
-  } catch (error) {
-    console.error(`Erreur lors de la récupération des informations du fichier ${filename}:`, error);
-    throw error;
-  }
-}
-
-/**
- * Récupère les données d'un fichier DBF
- * @param filename Nom du fichier DBF
- * @param page Page à récupérer (optionnel)
- * @param limit Limite d'enregistrements (optionnel)
- * @returns Promise<any>
- */
-export async function getDbfFileData(filename: string, page?: number, limit?: number) {
-  try {
-    let url = `${API_BASE_URL}/dbf-files/${encodeURIComponent(filename)}/data`;
-    
-    // Ajouter les paramètres de requête si présents
-    const params = new URLSearchParams();
-    if (page !== undefined) params.append('page', page.toString());
-    if (limit !== undefined) params.append('limit', limit.toString());
-    
-    if (params.toString()) {
-      url += `?${params.toString()}`;
-    }
-    
-    const response = await fetch(url);
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    return await response.json();
-  } catch (error) {
-    console.error(`Erreur lors de la récupération des données du fichier ${filename}:`, error);
-    throw error;
-  }
-}
-
-/**
- * Récupère un enregistrement spécifique d'un fichier DBF
- * @param filename Nom du fichier DBF
- * @param index Index de l'enregistrement
- * @returns Promise<any>
- */
-export async function getDbfRecord(filename: string, index: number) {
-  try {
-    const response = await fetch(`${API_BASE_URL}/dbf-files/${encodeURIComponent(filename)}/record/${index}`);
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    return await response.json();
-  } catch (error) {
-    console.error(`Erreur lors de la récupération de l'enregistrement ${index} du fichier ${filename}:`, error);
-    throw error;
-  }
-}
-
-/**
- * Récupère les données du fichier TABCODE.DBF
- * @returns Promise<any>
- */
-export async function getTabcodeData() {
-  try {
-    const response = await fetch(`${API_BASE_URL}/dbf-files/TABCODE.DBF/data`);
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    const result = await response.json();
-    return result.data || result.records || [];
-  } catch (error) {
-    console.error('Erreur lors de la récupération des données TABCODE:', error);
-    throw error;
-  }
-}
-
-/**
  * Récupère le nombre de centres depuis TABCODE.DBF
- * @returns Promise<{count: number, exemples: any[]}>
+ * Les centres sont identifiés par des codes commençant par 'S' (exemple: S02)
  */
 export async function getCentresCount() {
   try {
-    const response = await fetch(`${API_BASE_URL}/centres/count`);
+    const response = await fetch(`${API_BASE_URL}/api/centres/count`);
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
@@ -123,11 +39,10 @@ export async function getCentresCount() {
 
 /**
  * Récupère le nombre d'abonnés depuis ABONNE.DBF
- * @returns Promise<{count: number}>
  */
 export async function getAbonnesCount() {
   try {
-    const response = await fetch(`${API_BASE_URL}/abonnes/count`);
+    const response = await fetch(`${API_BASE_URL}/api/abonnes/count`);
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
@@ -140,11 +55,10 @@ export async function getAbonnesCount() {
 
 /**
  * Récupère le nombre d'abonnés par type depuis ABONNE.DBF avec jointure TABCODE.DBF
- * @returns Promise<{totalCount: number, types: Array<{code: string, designation: string, count: number}>}>
  */
 export async function getAbonnesCountByType() {
   try {
-    const response = await fetch(`${API_BASE_URL}/abonnes/count-by-type`);
+    const response = await fetch(`${API_BASE_URL}/api/abonnes/count-by-type`);
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
@@ -157,11 +71,10 @@ export async function getAbonnesCountByType() {
 
 /**
  * Récupère le nombre d'abonnés avec compteur à l'arrêt (ETATCPT = '20') depuis ABONMENT.DBF
- * @returns Promise<{count: number}>
  */
 export async function getAbonnesCompteurArret() {
   try {
-    const response = await fetch(`${API_BASE_URL}/abonnes/compteur-arret`);
+    const response = await fetch(`${API_BASE_URL}/api/abonnes/compteur-arret`);
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
@@ -174,11 +87,10 @@ export async function getAbonnesCompteurArret() {
 
 /**
  * Récupère le nombre d'abonnés sans compteur (ETATCPT = '30') depuis ABONMENT.DBF
- * @returns Promise<{count: number}>
  */
 export async function getAbonnesSansCompteur() {
   try {
-    const response = await fetch(`${API_BASE_URL}/abonnes/sans-compteur`);
+    const response = await fetch(`${API_BASE_URL}/api/abonnes/sans-compteur`);
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
@@ -189,15 +101,41 @@ export async function getAbonnesSansCompteur() {
   }
 }
 
-export default {
-  getDbfFiles,
-  getDbfFileInfo,
-  getDbfFileData,
-  getDbfRecord,
-  getTabcodeData,
-  getCentresCount,
-  getAbonnesCount,
-  getAbonnesCountByType,
-  getAbonnesCompteurArret,
-  getAbonnesSansCompteur
-};
+/**
+ * Met à jour le chemin du dossier DBF
+ */
+export async function updateDbfPath(dbfPath: string) {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/settings/dbf-path`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ dbfPath })
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('Erreur lors de la mise à jour du chemin DBF:', error);
+    throw error;
+  }
+}
+
+/**
+ * Récupère le chemin actuel du dossier DBF
+ */
+export async function getDbfPath() {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/settings/dbf-path`);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('Erreur lors de la récupération du chemin DBF:', error);
+    throw error;
+  }
+}

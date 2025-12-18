@@ -11,18 +11,18 @@ export class ClientsView {
   private render(): void {
     this.container.innerHTML = `
       <div class="clients-header">
-        <h2>Gestion des Clients</h2>
-        <p>Module de gestion de la base clients</p>
+        <h2>Portefeuille Abonnés</h2>
+        <p>Module de gestion du portefeuille des abonnés</p>
       </div>
       
       <div class="clients-stats">
         <div class="stat-card">
-          <h3>Total Clients</h3>
+          <h3>Total Abonnés</h3>
           <p class="stat-value">128</p>
         </div>
         
         <div class="stat-card">
-          <h3>Clients Actifs</h3>
+          <h3>Abonnés Actifs</h3>
           <p class="stat-value">96</p>
         </div>
         
@@ -33,8 +33,8 @@ export class ClientsView {
       </div>
       
       <div class="clients-actions">
-        <button class="btn btn-primary">Nouveau Client</button>
-        <button class="btn btn-secondary">Importer Clients</button>
+        <button class="btn btn-primary">Nouvel Abonné</button>
+        <button class="btn btn-secondary">Importer Abonnés</button>
       </div>
       
       <div class="clients-table-container">
@@ -51,7 +51,7 @@ export class ClientsView {
           </thead>
           <tbody>
             <tr>
-              <td>C001</td>
+              <td>A001</td>
               <td>Entreprise ABC</td>
               <td>Professionnel</td>
               <td>01 23 45 67 89</td>
@@ -62,7 +62,7 @@ export class ClientsView {
               </td>
             </tr>
             <tr>
-              <td>C002</td>
+              <td>A002</td>
               <td>M. Dupont</td>
               <td>Particulier</td>
               <td>06 12 34 56 78</td>

@@ -40,8 +40,8 @@ export class MainView {
       case 'dashboard':
         this.showDashboard();
         break;
-      case 'clients':
-        this.showClients();
+      case 'portefeuille':
+        this.showPortefeuille();
         break;
       case 'statistique-abonnes':
         this.showStatistiqueAbonnes();
@@ -69,13 +69,13 @@ export class MainView {
     this.contentContainer.appendChild(this.currentView);
   }
 
-  private showClients(): void {
+  private showPortefeuille(): void {
     // Supprimer la vue actuelle
     if (this.currentView) {
       this.contentContainer.removeChild(this.currentView);
     }
     
-    // Créer et afficher la page clients
+    // Créer et afficher la page portefeuille (anciennement clients)
     const clientsView = new ClientsView();
     this.currentView = clientsView.getElement();
     this.contentContainer.appendChild(this.currentView);

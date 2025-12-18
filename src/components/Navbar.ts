@@ -19,7 +19,7 @@ export class Navbar {
             <a href="#" class="navbar-link" data-view="dashboard">Tableau de bord</a>
           </li>
           <li class="navbar-item">
-            <a href="#" class="navbar-link" data-view="clients">Clients</a>
+            <a href="#" class="navbar-link" data-view="portefeuille">Portefeuille</a>
           </li>
           <li class="navbar-item">
             <a href="#" class="navbar-link" data-view="statistique-abonnes">Statistique Abonnés</a>

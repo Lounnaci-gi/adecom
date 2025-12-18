@@ -1,26 +1,28 @@
 // dbfService.ts
-import { getTabcodeData, getCentresCount, getAbonnesCount, getAbonnesCountByType, getAbonnesCompteurArret, getAbonnesSansCompteur } from '../api';
+import { getDbfFiles, getCentresCount, getAbonnesCount, getAbonnesCountByType, getAbonnesCompteurArret, getAbonnesSansCompteur, updateDbfPath, getDbfPath } from '../api';
 
-export interface Centre {
-  code: string;
-  libelle: string;
-}
-
-export interface AbonneType {
-  code: string;
-  designation: string;
-  count: number;
-  resilieCount: number;
-}
-
+/**
+ * Service pour gérer les opérations sur les fichiers DBF
+ */
 export class DbfService {
   /**
-   * Récupère le nombre de centres depuis le fichier TABCODE.DBF
-   * Les centres sont identifiés par un code commençant par 'S'
+   * Récupère la liste des fichiers DBF disponibles
+   */
+  static async getDbfFiles() {
+    try {
+      return await getDbfFiles();
+    } catch (error) {
+      console.error('Erreur lors de la récupération des fichiers DBF:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Récupère le nombre réel de centres depuis TABCODE.DBF
+   * Les centres sont identifiés par des codes commençant par 'S' (exemple: S02)
    */
   static async getCentresCount(): Promise<number> {
     try {
-      // Utiliser le nouvel endpoint dédié
       const result = await getCentresCount();
       return result.count || 0;
     } catch (error) {
@@ -29,9 +31,9 @@ export class DbfService {
       return 0;
     }
   }
-  
+
   /**
-   * Récupère le nombre d'abonnés depuis le fichier ABONNE.DBF
+   * Récupère le nombre d'abonnés depuis ABONNE.DBF
    */
   static async getAbonnesCount(): Promise<number> {
     try {
@@ -43,25 +45,19 @@ export class DbfService {
       return 0;
     }
   }
-  
+
   /**
-   * Récupère le nombre d'abonnés par type depuis les fichiers ABONNE.DBF et TABCODE.DBF
+   * Récupère le nombre d'abonnés par type depuis ABONNE.DBF avec jointure TABCODE.DBF
    */
-  static async getAbonnesCountByType(): Promise<{totalCount: number, totalResilieCount: number, types: AbonneType[]}> {
+  static async getAbonnesCountByType() {
     try {
-      const result = await getAbonnesCountByType();
-      return result;
+      return await getAbonnesCountByType();
     } catch (error) {
       console.error('Erreur lors de la récupération du nombre d\'abonnés par type:', error);
-      // Retourner un objet vide en cas d'erreur
-      return {
-        totalCount: 0,
-        totalResilieCount: 0,
-        types: []
-      };
+      throw error;
     }
   }
-  
+
   /**
    * Récupère le nombre d'abonnés avec compteur à l'arrêt (ETATCPT = '20') depuis ABONMENT.DBF
    */
@@ -75,7 +71,7 @@ export class DbfService {
       return 0;
     }
   }
-  
+
   /**
    * Récupère le nombre d'abonnés sans compteur (ETATCPT = '30') depuis ABONMENT.DBF
    */
@@ -89,36 +85,30 @@ export class DbfService {
       return 0;
     }
   }
-  
+
   /**
-   * Récupère la liste des centres depuis le fichier TABCODE.DBF
-   * Les centres sont identifiés par un code commençant par 'S'
+   * Met à jour le chemin du dossier DBF
    */
-  static async getCentresList(): Promise<Centre[]> {
+  static async updateDbfPath(dbfPath: string): Promise<boolean> {
     try {
-      const data = await getTabcodeData();
-      
-      // Vérifier si nous avons des données
-      if (!data || !Array.isArray(data) || data.length === 0) {
-        console.warn('Aucune donnée TABCODE disponible');
-        return [];
-      }
-      
-      // Filtrer et mapper les enregistrements dont le code commence par 'S'
-      // Le champ s'appelle CODE_AFFEC selon les informations du fichier
-      const centres = data
-        .filter((record: any) => {
-          return record.CODE_AFFEC && typeof record.CODE_AFFEC === 'string' && record.CODE_AFFEC.startsWith('S');
-        })
-        .map((record: any) => ({
-          code: record.CODE_AFFEC,
-          libelle: record.LIBELLEEC || record.LIBELLE || ''
-        }));
-      
-      return centres;
+      const result = await updateDbfPath(dbfPath);
+      return result.success || false;
     } catch (error) {
-      console.error('Erreur lors de la récupération de la liste des centres:', error);
-      return [];
+      console.error('Erreur lors de la mise à jour du chemin DBF:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Récupère le chemin actuel du dossier DBF
+   */
+  static async getDbfPath(): Promise<string> {
+    try {
+      const result = await getDbfPath();
+      return result.dbfPath || 'D:/epeor';
+    } catch (error) {
+      console.error('Erreur lors de la récupération du chemin DBF:', error);
+      return 'D:/epeor';
     }
   }
 }
