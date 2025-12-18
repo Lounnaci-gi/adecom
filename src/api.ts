@@ -121,11 +121,29 @@ export async function getCentresCount() {
   }
 }
 
+/**
+ * Récupère le nombre d'abonnés depuis ABONNE.DBF
+ * @returns Promise<{count: number}>
+ */
+export async function getAbonnesCount() {
+  try {
+    const response = await fetch(`${API_BASE_URL}/abonnes/count`);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('Erreur lors de la récupération du nombre d\'abonnés:', error);
+    throw error;
+  }
+}
+
 export default {
   getDbfFiles,
   getDbfFileInfo,
   getDbfFileData,
   getDbfRecord,
   getTabcodeData,
-  getCentresCount
+  getCentresCount,
+  getAbonnesCount
 };

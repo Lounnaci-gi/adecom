@@ -401,6 +401,40 @@ app.get('/api/centres/count', (req, res) => {
   }
 });
 
+// Route pour obtenir le nombre d'abonnés depuis ABONNE.DBF
+app.get('/api/abonnes/count', (req, res) => {
+  try {
+    const filePath = path.join(DBF_FOLDER_PATH, 'ABONNE.DBF');
+    
+    // Vérifier si le fichier existe
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ 
+        error: 'Fichier ABONNE.DBF non trouvé',
+        filename: 'ABONNE.DBF'
+      });
+    }
+    
+    // Lire les 32 premiers octets pour obtenir le nombre d'enregistrements
+    const buffer = Buffer.alloc(32);
+    const fd = fs.openSync(filePath, 'r');
+    fs.readSync(fd, buffer, 0, 32, 0);
+    fs.closeSync(fd);
+    
+    // Extraire le nombre d'enregistrements (position 4, 4 octets, little-endian)
+    const numberOfRecords = buffer.readUInt32LE(4);
+    
+    res.json({
+      count: numberOfRecords
+    });
+  } catch (error) {
+    console.error('Erreur lors du comptage des abonnés:', error);
+    res.status(500).json({ 
+      error: 'Erreur serveur lors du comptage des abonnés',
+      message: (error as Error).message
+    });
+  }
+});
+
 // Démarrer le serveur
 app.listen(PORT, () => {
   console.log(`Serveur DBF démarré sur http://localhost:${PORT}`);

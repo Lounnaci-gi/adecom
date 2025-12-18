@@ -4,16 +4,17 @@ import { DbfService } from '../services/dbfService';
 export class Dashboard {
   private container: HTMLElement;
   private centresCount: number = 0;
+  private abonnesCount: number = 0;
   private isLoading: boolean = true;
 
   constructor() {
     this.container = document.createElement('div');
     this.container.className = 'dashboard';
     this.render();
-    this.loadCentresCount();
+    this.loadCounts();
   }
 
-  private async loadCentresCount(): Promise<void> {
+  private async loadCounts(): Promise<void> {
     try {
       this.isLoading = true;
       this.updateLoadingState();
@@ -21,10 +22,13 @@ export class Dashboard {
       // Récupérer le nombre réel de centres depuis TABCODE.DBF
       this.centresCount = await DbfService.getCentresCount();
       
+      // Récupérer le nombre d'abonnés depuis ABONNE.DBF
+      this.abonnesCount = await DbfService.getAbonnesCount();
+      
       this.isLoading = false;
-      this.updateCentresCountDisplay();
+      this.updateCountsDisplay();
     } catch (error) {
-      console.error('Erreur lors du chargement du nombre de centres:', error);
+      console.error('Erreur lors du chargement des données:', error);
       this.isLoading = false;
       this.updateLoadingState();
     }
@@ -32,6 +36,8 @@ export class Dashboard {
 
   private updateLoadingState(): void {
     const centresCard = this.container.querySelector('.centres-stat-card');
+    const abonnesCard = this.container.querySelector('.abonnes-stat-card');
+    
     if (centresCard) {
       if (this.isLoading) {
         centresCard.innerHTML = `
@@ -43,15 +49,37 @@ export class Dashboard {
         `;
       }
     }
+    
+    if (abonnesCard) {
+      if (this.isLoading) {
+        abonnesCard.innerHTML = `
+          <h3>Abonnés</h3>
+          <p class="stat-value">
+            <span class="loading-spinner"></span>
+          </p>
+          <p class="stat-change">Chargement...</p>
+        `;
+      }
+    }
   }
 
-  private updateCentresCountDisplay(): void {
+  private updateCountsDisplay(): void {
     const centresCard = this.container.querySelector('.centres-stat-card');
+    const abonnesCard = this.container.querySelector('.abonnes-stat-card');
+    
     if (centresCard) {
       centresCard.innerHTML = `
         <h3>Centres</h3>
         <p class="stat-value">${this.centresCount}</p>
         <p class="stat-change positive">Centres actifs</p>
+      `;
+    }
+    
+    if (abonnesCard) {
+      abonnesCard.innerHTML = `
+        <h3>Abonnés</h3>
+        <p class="stat-value">${this.abonnesCount.toLocaleString()}</p>
+        <p class="stat-change positive">Abonnés actifs</p>
       `;
     }
   }
@@ -72,6 +100,14 @@ export class Dashboard {
           <p class="stat-change">${this.isLoading ? 'Chargement...' : 'Centres actifs'}</p>
         </div>
         
+        <div class="stat-card abonnes-stat-card">
+          <h3>Abonnés</h3>
+          <p class="stat-value">
+            ${this.isLoading ? '<span class="loading-spinner"></span>' : this.abonnesCount.toLocaleString()}
+          </p>
+          <p class="stat-change">${this.isLoading ? 'Chargement...' : 'Abonnés actifs'}</p>
+        </div>
+        
         <div class="stat-card">
           <h3>Ventes aujourd'hui</h3>
           <p class="stat-value">€1,250</p>
@@ -82,12 +118,6 @@ export class Dashboard {
           <h3>Nouveaux clients</h3>
           <p class="stat-value">24</p>
           <p class="stat-change positive">+8% par rapport à hier</p>
-        </div>
-        
-        <div class="stat-card">
-          <h3>Commandes en cours</h3>
-          <p class="stat-value">8</p>
-          <p class="stat-change negative">-3% par rapport à hier</p>
         </div>
       </div>
       

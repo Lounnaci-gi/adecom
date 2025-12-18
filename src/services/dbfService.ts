@@ -1,5 +1,5 @@
 // dbfService.ts
-import { getTabcodeData, getCentresCount } from '../api';
+import { getTabcodeData, getCentresCount, getAbonnesCount } from '../api';
 
 export interface Centre {
   code: string;
@@ -18,6 +18,20 @@ export class DbfService {
       return result.count || 0;
     } catch (error) {
       console.error('Erreur lors de la récupération du nombre de centres:', error);
+      // Retourner 0 en cas d'erreur
+      return 0;
+    }
+  }
+  
+  /**
+   * Récupère le nombre d'abonnés depuis le fichier ABONNE.DBF
+   */
+  static async getAbonnesCount(): Promise<number> {
+    try {
+      const result = await getAbonnesCount();
+      return result.count || 0;
+    } catch (error) {
+      console.error('Erreur lors de la récupération du nombre d\'abonnés:', error);
       // Retourner 0 en cas d'erreur
       return 0;
     }
