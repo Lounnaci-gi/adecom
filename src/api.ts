@@ -86,9 +86,46 @@ export async function getDbfRecord(filename: string, index: number) {
   }
 }
 
+/**
+ * Récupère les données du fichier TABCODE.DBF
+ * @returns Promise<any>
+ */
+export async function getTabcodeData() {
+  try {
+    const response = await fetch(`${API_BASE_URL}/dbf-files/TABCODE.DBF/data`);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    const result = await response.json();
+    return result.data || result.records || [];
+  } catch (error) {
+    console.error('Erreur lors de la récupération des données TABCODE:', error);
+    throw error;
+  }
+}
+
+/**
+ * Récupère le nombre de centres depuis TABCODE.DBF
+ * @returns Promise<{count: number, exemples: any[]}>
+ */
+export async function getCentresCount() {
+  try {
+    const response = await fetch(`${API_BASE_URL}/centres/count`);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('Erreur lors de la récupération du nombre de centres:', error);
+    throw error;
+  }
+}
+
 export default {
   getDbfFiles,
   getDbfFileInfo,
   getDbfFileData,
-  getDbfRecord
+  getDbfRecord,
+  getTabcodeData,
+  getCentresCount
 };

@@ -1,0 +1,54 @@
+[
+  {
+    "code": "S01",
+    "libelle": "MEDEA"
+  },
+  {
+    "code": "S02",
+    "libelle": "BERROUAGHIA"
+  },
+  {
+    "code": "S03",
+    "libelle": "K.E.B"
+  },
+  {
+    "code": "S04",
+    "libelle": "AIN BOUCIF"
+  },
+  {
+    "code": "S05",
+    "libelle": "BENI SLIMANE"
+  },
+  {
+    "code": "S06",
+    "libelle": "SI EL MAHDJOUB"
+  },
+  {
+    "code": "S07",
+    "libelle": "OMARIA"
+  },
+  {
+    "code": "S08",
+    "libelle": "AZIZ"
+  },
+  {
+    "code": "S09",
+    "libelle": "SOUAGHI"
+  },
+  {
+    "code": "S10",
+    "libelle": "CHELALET EL ADHAOURA"
+  },
+  {
+    "code": "S11",
+    "libelle": "AZIZIA"
+  },
+  {
+    "code": "S12",
+    "libelle": "TABLAT"
+  },
+  {
+    "code": "S99",
+    "libelle": "NON GERES"
+  }
+]

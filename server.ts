@@ -8,6 +8,159 @@ import { DBFFile } from 'dbffile';
 const PORT = process.env.PORT || 3000;
 const DBF_FOLDER_PATH = process.env.DBF_FOLDER_PATH || 'D:/epeor';
 
+// Fonction pour lire un enregistrement DBF
+function readDBFRecord(buffer: Buffer, offset: number, recordLength: number) {
+  // Le premier octet indique si l'enregistrement est supprimé (0x2A = *)
+  const isDeleted = buffer.readUInt8(offset) === 0x2A;
+  
+  if (isDeleted) {
+    return null; // Enregistrement supprimé
+  }
+  
+  // Extraire les données de l'enregistrement
+  const recordData: any = {};
+  let fieldOffset = offset + 1; // +1 pour ignorer l'indicateur de suppression
+  
+  // Selon l'analyse précédente, les champs sont :
+  // 1. CODE_AFFEC (4 caractères)
+  // 2. LIBELLEEC (20 caractères)
+  // 3. UNITEEEC (2 caractères)
+  // 4. MONTEEC (10 caractères)
+  // 5. NBREXEEC (1 caractère)
+  // 6. CHAMPS1EC (15 caractères)
+  // 7. CHAMPS2EC (15 caractères)
+  
+  recordData.CODE_AFFEC = buffer.subarray(fieldOffset, fieldOffset + 4).toString('utf-8').trim();
+  fieldOffset += 4;
+  
+  recordData.LIBELLEEC = buffer.subarray(fieldOffset, fieldOffset + 20).toString('utf-8').trim();
+  fieldOffset += 20;
+  
+  recordData.UNITEEEC = buffer.subarray(fieldOffset, fieldOffset + 2).toString('utf-8').trim();
+  fieldOffset += 2;
+  
+  recordData.MONTEEC = buffer.subarray(fieldOffset, fieldOffset + 10).toString('utf-8').trim();
+  fieldOffset += 10;
+  
+  recordData.NBREXEEC = buffer.subarray(fieldOffset, fieldOffset + 1).toString('utf-8').trim();
+  fieldOffset += 1;
+  
+  recordData.CHAMPS1EC = buffer.subarray(fieldOffset, fieldOffset + 15).toString('utf-8').trim();
+  fieldOffset += 15;
+  
+  recordData.CHAMPS2EC = buffer.subarray(fieldOffset, fieldOffset + 15).toString('utf-8').trim();
+  
+  return recordData;
+}
+
+// Fonction pour compter les centres dans TABCODE.DBF
+function countCentresInTabcode(): { count: number; exemples: any[] } {
+  try {
+    const filePath = path.join(DBF_FOLDER_PATH, 'TABCODE.DBF');
+    
+    // Vérifier si le fichier existe
+    if (!fs.existsSync(filePath)) {
+      throw new Error('Fichier TABCODE.DBF non trouvé');
+    }
+    
+    // Lire tout le fichier
+    const buffer = fs.readFileSync(filePath);
+    
+    // Analyser l'en-tête pour obtenir les informations
+    const header = {
+      numberOfRecords: buffer.readUInt32LE(4),
+      headerLength: buffer.readUInt16LE(8),
+      recordLength: buffer.readUInt16LE(10)
+    };
+    
+    // Lire tous les enregistrements et compter les centres
+    let centresCount = 0;
+    let exemplesCentres: any[] = [];
+    
+    for (let i = 0; i < header.numberOfRecords; i++) {
+      const recordOffset = header.headerLength + (i * header.recordLength);
+      
+      // Vérifier que nous ne dépassons pas la fin du fichier
+      if (recordOffset + header.recordLength > buffer.length) {
+        break;
+      }
+      
+      const record = readDBFRecord(buffer, recordOffset, header.recordLength);
+      
+      if (record && record.CODE_AFFEC) {
+        // Vérifier si c'est un centre (code commençant par 'S')
+        if (record.CODE_AFFEC.startsWith('S')) {
+          centresCount++;
+          
+          // Stocker quelques exemples
+          if (exemplesCentres.length < 5) {
+            exemplesCentres.push({
+              code: record.CODE_AFFEC,
+              libelle: record.LIBELLEEC
+            });
+          }
+        }
+      }
+    }
+    
+    return {
+      count: centresCount,
+      exemples: exemplesCentres
+    };
+  } catch (error) {
+    console.error('Erreur lors du comptage des centres:', error);
+    return {
+      count: 0,
+      exemples: []
+    };
+  }
+}
+
+// Fonction pour lire les données de TABCODE.DBF
+function readTabcodeData(): any[] {
+  try {
+    const filePath = path.join(DBF_FOLDER_PATH, 'TABCODE.DBF');
+    
+    // Vérifier si le fichier existe
+    if (!fs.existsSync(filePath)) {
+      throw new Error('Fichier TABCODE.DBF non trouvé');
+    }
+    
+    // Lire tout le fichier
+    const buffer = fs.readFileSync(filePath);
+    
+    // Analyser l'en-tête pour obtenir les informations
+    const header = {
+      numberOfRecords: buffer.readUInt32LE(4),
+      headerLength: buffer.readUInt16LE(8),
+      recordLength: buffer.readUInt16LE(10)
+    };
+    
+    // Lire tous les enregistrements
+    const records: any[] = [];
+    
+    for (let i = 0; i < header.numberOfRecords; i++) {
+      const recordOffset = header.headerLength + (i * header.recordLength);
+      
+      // Vérifier que nous ne dépassons pas la fin du fichier
+      if (recordOffset + header.recordLength > buffer.length) {
+        break;
+      }
+      
+      const record = readDBFRecord(buffer, recordOffset, header.recordLength);
+      
+      if (record) {
+        records.push(record);
+      }
+    }
+    
+    return records;
+  } catch (error) {
+    console.error('Erreur lors de la lecture des données TABCODE:', error);
+    return [];
+  }
+}
+
 // Créer l'application Express
 const app = express();
 
@@ -98,6 +251,31 @@ app.get('/api/dbf-files/:filename/info', async (req, res) => {
 app.get('/api/dbf-files/:filename/data', async (req, res) => {
   try {
     const filename = req.params.filename;
+    
+    // Pour TABCODE.DBF, utiliser notre méthode personnalisée
+    if (filename === 'TABCODE.DBF') {
+      const records = readTabcodeData();
+      
+      // Paramètres de pagination (optionnels)
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = Math.min(parseInt(req.query.limit as string) || 50, 1000); // Max 1000 enregistrements
+      const offset = (page - 1) * limit;
+      
+      // Appliquer la pagination manuellement
+      const paginatedRecords = records.slice(offset, offset + limit);
+      
+      res.json({
+        filename,
+        page,
+        limit,
+        totalRecords: records.length,
+        recordsReturned: paginatedRecords.length,
+        records: paginatedRecords
+      });
+      return;
+    }
+    
+    // Pour les autres fichiers, utiliser la méthode standard
     const filePath = path.join(DBF_FOLDER_PATH, filename);
     
     // Vérifier si le fichier existe
@@ -121,19 +299,24 @@ app.get('/api/dbf-files/:filename/data', async (req, res) => {
     const limit = Math.min(parseInt(req.query.limit as string) || 50, 1000); // Max 1000 enregistrements
     const offset = (page - 1) * limit;
     
-    // Ouvrir le fichier DBF
-    const dbf = await DBFFile.open(filePath);
+    // Ouvrir le fichier DBF avec les options appropriées
+    const dbf = await DBFFile.open(filePath, {
+      encoding: 'latin1'
+    });
     
-    // Lire uniquement les enregistrements demandés
-    const records = await dbf.readRecords(offset, limit);
+    // Toujours lire tous les enregistrements pour éviter les problèmes
+    const allRecords = await dbf.readRecords(0, dbf.recordCount);
+    
+    // Appliquer la pagination manuellement
+    const paginatedRecords = allRecords.slice(offset, offset + limit);
     
     res.json({
       filename,
       page,
       limit,
       totalRecords: dbf.recordCount,
-      recordsReturned: records.length,
-      records
+      recordsReturned: paginatedRecords.length,
+      records: paginatedRecords
     });
   } catch (error) {
     console.error('Erreur lors de la lecture des données du fichier:', error);
@@ -199,6 +382,20 @@ app.get('/api/dbf-files/:filename/record/:index', async (req, res) => {
     console.error('Erreur lors de la lecture de l\'enregistrement:', error);
     res.status(500).json({ 
       error: 'Erreur serveur lors de la lecture de l\'enregistrement',
+      message: (error as Error).message
+    });
+  }
+});
+
+// Route pour obtenir le nombre de centres depuis TABCODE.DBF
+app.get('/api/centres/count', (req, res) => {
+  try {
+    const result = countCentresInTabcode();
+    res.json(result);
+  } catch (error) {
+    console.error('Erreur lors du comptage des centres:', error);
+    res.status(500).json({ 
+      error: 'Erreur serveur lors du comptage des centres',
       message: (error as Error).message
     });
   }

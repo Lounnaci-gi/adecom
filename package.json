@@ -19,9 +19,11 @@
   "dependencies": {
     "concurrently": "^9.2.1",
     "cors": "^2.8.5",
+    "dbf-reader": "^1.0.3",
     "dbffile": "^1.12.0",
     "dotenv": "^17.2.3",
     "express": "^5.2.1",
+    "node-dbf": "^0.4.0",
     "ts-node": "^10.9.2"
   }
 }
