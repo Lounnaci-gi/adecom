@@ -621,6 +621,134 @@ app.get('/api/abonnes/count-by-type', (req, res) => {
   }
 });
 
+// Route pour obtenir le nombre d'abonnés avec compteur à l'arrêt (ETATCPT = '20') depuis ABONMENT.DBF
+app.get('/api/abonnes/compteur-arret', (req, res) => {
+  try {
+    const abonmentFilePath = path.join(DBF_FOLDER_PATH, 'ABONMENT.DBF');
+    
+    // Vérifier si le fichier existe
+    if (!fs.existsSync(abonmentFilePath)) {
+      return res.status(404).json({ 
+        error: 'Fichier ABONMENT.DBF non trouvé'
+      });
+    }
+    
+    // Lire les informations d'en-tête d'ABONMENT.DBF
+    const abonmentHeaderBuffer = Buffer.alloc(32);
+    const abonmentFd = fs.openSync(abonmentFilePath, 'r');
+    fs.readSync(abonmentFd, abonmentHeaderBuffer, 0, 32, 0);
+    const abonmentHeader = {
+      numberOfRecords: abonmentHeaderBuffer.readUInt32LE(4),
+      headerLength: abonmentHeaderBuffer.readUInt16LE(8),
+      recordLength: abonmentHeaderBuffer.readUInt16LE(10)
+    };
+    fs.closeSync(abonmentFd);
+    
+    // Compter les abonnés avec compteur à l'arrêt (ETATCPT = '20')
+    let compteurArretCount = 0;
+    for (let i = 0; i < abonmentHeader.numberOfRecords; i++) {
+      const recordOffset = abonmentHeader.headerLength + (i * abonmentHeader.recordLength);
+      
+      const recordBuffer = Buffer.alloc(abonmentHeader.recordLength + 10);
+      const fd = fs.openSync(abonmentFilePath, 'r');
+      fs.readSync(fd, recordBuffer, 0, abonmentHeader.recordLength, recordOffset);
+      fs.closeSync(fd);
+      
+      // Extraire les données de l'enregistrement ABONMENT
+      const isDeleted = recordBuffer.readUInt8(0) === 0x2A;
+      if (!isDeleted) {
+        // Calculer l'offset pour le champ ETATCPT (champ 5)
+        let fieldOffset = 1; // +1 pour ignorer l'indicateur de suppression
+        
+        // Passer les champs 1, 2, 3, 4
+        fieldOffset += 6 + 15 + 8 + 3; // NUMAB (6) + NUMSER (15) + DATEINST (8) + DIAMETRE (3)
+        
+        // ETATCPT (champ 5) - 2 caractères
+        const etatcpt = recordBuffer.subarray(fieldOffset, fieldOffset + 2).toString('utf-8').trim();
+        
+        // Si l'état est '20', c'est un abonné avec compteur à l'arrêt
+        if (etatcpt === '20') {
+          compteurArretCount++;
+        }
+      }
+    }
+    
+    res.json({
+      count: compteurArretCount
+    });
+  } catch (error) {
+    console.error('Erreur lors du comptage des abonnés avec compteur à l\'arrêt:', error);
+    res.status(500).json({ 
+      error: 'Erreur serveur lors du comptage des abonnés avec compteur à l\'arrêt',
+      message: (error as Error).message
+    });
+  }
+});
+
+// Route pour obtenir le nombre d'abonnés sans compteur (ETATCPT = '30') depuis ABONMENT.DBF
+app.get('/api/abonnes/sans-compteur', (req, res) => {
+  try {
+    const abonmentFilePath = path.join(DBF_FOLDER_PATH, 'ABONMENT.DBF');
+    
+    // Vérifier si le fichier existe
+    if (!fs.existsSync(abonmentFilePath)) {
+      return res.status(404).json({ 
+        error: 'Fichier ABONMENT.DBF non trouvé'
+      });
+    }
+    
+    // Lire les informations d'en-tête d'ABONMENT.DBF
+    const abonmentHeaderBuffer = Buffer.alloc(32);
+    const abonmentFd = fs.openSync(abonmentFilePath, 'r');
+    fs.readSync(abonmentFd, abonmentHeaderBuffer, 0, 32, 0);
+    const abonmentHeader = {
+      numberOfRecords: abonmentHeaderBuffer.readUInt32LE(4),
+      headerLength: abonmentHeaderBuffer.readUInt16LE(8),
+      recordLength: abonmentHeaderBuffer.readUInt16LE(10)
+    };
+    fs.closeSync(abonmentFd);
+    
+    // Compter les abonnés sans compteur (ETATCPT = '30')
+    let sansCompteurCount = 0;
+    for (let i = 0; i < abonmentHeader.numberOfRecords; i++) {
+      const recordOffset = abonmentHeader.headerLength + (i * abonmentHeader.recordLength);
+      
+      const recordBuffer = Buffer.alloc(abonmentHeader.recordLength + 10);
+      const fd = fs.openSync(abonmentFilePath, 'r');
+      fs.readSync(fd, recordBuffer, 0, abonmentHeader.recordLength, recordOffset);
+      fs.closeSync(fd);
+      
+      // Extraire les données de l'enregistrement ABONMENT
+      const isDeleted = recordBuffer.readUInt8(0) === 0x2A;
+      if (!isDeleted) {
+        // Calculer l'offset pour le champ ETATCPT (champ 5)
+        let fieldOffset = 1; // +1 pour ignorer l'indicateur de suppression
+        
+        // Passer les champs 1, 2, 3, 4
+        fieldOffset += 6 + 15 + 8 + 3; // NUMAB (6) + NUMSER (15) + DATEINST (8) + DIAMETRE (3)
+        
+        // ETATCPT (champ 5) - 2 caractères
+        const etatcpt = recordBuffer.subarray(fieldOffset, fieldOffset + 2).toString('utf-8').trim();
+        
+        // Si l'état est '30', c'est un abonné sans compteur
+        if (etatcpt === '30') {
+          sansCompteurCount++;
+        }
+      }
+    }
+    
+    res.json({
+      count: sansCompteurCount
+    });
+  } catch (error) {
+    console.error('Erreur lors du comptage des abonnés sans compteur:', error);
+    res.status(500).json({ 
+      error: 'Erreur serveur lors du comptage des abonnés sans compteur',
+      message: (error as Error).message
+    });
+  }
+});
+
 // Démarrer le serveur
 app.listen(PORT, () => {
   console.log(`Serveur DBF démarré sur http://localhost:${PORT}`);

@@ -592,10 +592,25 @@ tr:hover {
   padding: 1rem;
 }
 
-.chart-example {
+.pie-chart-container {
+  display: flex;
+  justify-content: center;
   margin: 1rem 0;
-  white-space: nowrap;
-  overflow-x: auto;
+}
+
+.pie-chart {
+  position: relative;
+  width: 200px;
+  height: 200px;
+  margin: 0 auto;
+}
+
+.pie-segment {
+  position: absolute;
+  width: 200px;
+  height: 200px;
+  border-radius: 50%;
+  transform-origin: center;
 }
 
 .chart-legend {
@@ -872,5 +887,15 @@ tr:hover {
   
   .clients-stats {
     grid-template-columns: 1fr;
+  }
+  
+  .pie-chart {
+    width: 150px;
+    height: 150px;
+  }
+  
+  .pie-segment {
+    width: 150px;
+    height: 150px;
   }
 }

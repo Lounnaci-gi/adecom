@@ -1,5 +1,5 @@
 // dbfService.ts
-import { getTabcodeData, getCentresCount, getAbonnesCount, getAbonnesCountByType } from '../api';
+import { getTabcodeData, getCentresCount, getAbonnesCount, getAbonnesCountByType, getAbonnesCompteurArret, getAbonnesSansCompteur } from '../api';
 
 export interface Centre {
   code: string;
@@ -10,6 +10,7 @@ export interface AbonneType {
   code: string;
   designation: string;
   count: number;
+  resilieCount: number;
 }
 
 export class DbfService {
@@ -46,7 +47,7 @@ export class DbfService {
   /**
    * Récupère le nombre d'abonnés par type depuis les fichiers ABONNE.DBF et TABCODE.DBF
    */
-  static async getAbonnesCountByType(): Promise<{totalCount: number, types: AbonneType[]}> {
+  static async getAbonnesCountByType(): Promise<{totalCount: number, totalResilieCount: number, types: AbonneType[]}> {
     try {
       const result = await getAbonnesCountByType();
       return result;
@@ -55,8 +56,37 @@ export class DbfService {
       // Retourner un objet vide en cas d'erreur
       return {
         totalCount: 0,
+        totalResilieCount: 0,
         types: []
       };
+    }
+  }
+  
+  /**
+   * Récupère le nombre d'abonnés avec compteur à l'arrêt (ETATCPT = '20') depuis ABONMENT.DBF
+   */
+  static async getAbonnesCompteurArret(): Promise<number> {
+    try {
+      const result = await getAbonnesCompteurArret();
+      return result.count || 0;
+    } catch (error) {
+      console.error('Erreur lors de la récupération du nombre d\'abonnés avec compteur à l\'arrêt:', error);
+      // Retourner 0 en cas d'erreur
+      return 0;
+    }
+  }
+  
+  /**
+   * Récupère le nombre d'abonnés sans compteur (ETATCPT = '30') depuis ABONMENT.DBF
+   */
+  static async getAbonnesSansCompteur(): Promise<number> {
+    try {
+      const result = await getAbonnesSansCompteur();
+      return result.count || 0;
+    } catch (error) {
+      console.error('Erreur lors de la récupération du nombre d\'abonnés sans compteur:', error);
+      // Retourner 0 en cas d'erreur
+      return 0;
     }
   }
   

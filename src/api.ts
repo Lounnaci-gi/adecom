@@ -155,6 +155,40 @@ export async function getAbonnesCountByType() {
   }
 }
 
+/**
+ * Récupère le nombre d'abonnés avec compteur à l'arrêt (ETATCPT = '20') depuis ABONMENT.DBF
+ * @returns Promise<{count: number}>
+ */
+export async function getAbonnesCompteurArret() {
+  try {
+    const response = await fetch(`${API_BASE_URL}/abonnes/compteur-arret`);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('Erreur lors de la récupération du nombre d\'abonnés avec compteur à l\'arrêt:', error);
+    throw error;
+  }
+}
+
+/**
+ * Récupère le nombre d'abonnés sans compteur (ETATCPT = '30') depuis ABONMENT.DBF
+ * @returns Promise<{count: number}>
+ */
+export async function getAbonnesSansCompteur() {
+  try {
+    const response = await fetch(`${API_BASE_URL}/abonnes/sans-compteur`);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('Erreur lors de la récupération du nombre d\'abonnés sans compteur:', error);
+    throw error;
+  }
+}
+
 export default {
   getDbfFiles,
   getDbfFileInfo,
@@ -163,5 +197,7 @@ export default {
   getTabcodeData,
   getCentresCount,
   getAbonnesCount,
-  getAbonnesCountByType
+  getAbonnesCountByType,
+  getAbonnesCompteurArret,
+  getAbonnesSansCompteur
 };

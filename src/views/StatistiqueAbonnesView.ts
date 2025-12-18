@@ -13,6 +13,8 @@ export class StatistiqueAbonnesView {
   private isLoading: boolean = true;
   private totalCount: number = 0;
   private totalResilieCount: number = 0;
+  private compteurArretCount: number = 0;
+  private sansCompteurCount: number = 0;
   private abonnesTypes: AbonneType[] = [];
 
   constructor() {
@@ -32,6 +34,12 @@ export class StatistiqueAbonnesView {
       this.totalCount = result.totalCount;
       this.totalResilieCount = result.totalResilieCount || 0;
       this.abonnesTypes = result.types;
+      
+      // Récupérer le nombre d'abonnés avec compteur à l'arrêt
+      this.compteurArretCount = await DbfService.getAbonnesCompteurArret();
+      
+      // Récupérer le nombre d'abonnés sans compteur
+      this.sansCompteurCount = await DbfService.getAbonnesSansCompteur();
       
       this.isLoading = false;
       this.updateDisplay();
@@ -63,29 +71,95 @@ export class StatistiqueAbonnesView {
   private updateDisplay(): void {
     // Calculer les statistiques principales
     const tauxResiliation = this.totalCount > 0 ? ((this.totalResilieCount / this.totalCount) * 100).toFixed(1) : '0';
-    const nouveauxAbonnes = Math.max(0, this.totalCount - this.totalResilieCount);
+    const abonnesReel = Math.max(0, this.totalCount - this.totalResilieCount);
+    const tauxCompteurArret = this.totalCount > 0 ? ((this.compteurArretCount / this.totalCount) * 100).toFixed(1) : '0';
+    const tauxSansCompteur = this.totalCount > 0 ? ((this.sansCompteurCount / this.totalCount) * 100).toFixed(1) : '0';
     
-    // Préparer les données pour le graphique
-    const topTypes = this.abonnesTypes.slice(0, 4);
-    const autresCount = this.abonnesTypes.slice(4).reduce((sum, type) => sum + type.count, 0);
+    // Préparer les données pour le graphique circulaire SVG
+    // Trier par count décroissant et prendre les 5 premiers
+    const sortedTypes = [...this.abonnesTypes].sort((a, b) => b.count - a.count);
+    const topTypes = sortedTypes.slice(0, 5);
+    const autresCount = sortedTypes.slice(5).reduce((sum, type) => sum + type.count, 0);
     
-    // Créer les segments du graphique
-    let chartSegments = '';
+    // Créer les segments du graphique circulaire SVG
+    let svgPaths = '';
     let chartLegend = '';
+    let cumulativePercentage = 0;
+    
+    const colors = ['#4CAF50', '#2196F3', '#FFC107', '#FF5722', '#9C27B0', '#9E9E9E'];
+    const centerX = 100;
+    const centerY = 100;
+    const radius = 80;
+    
+    // Fonction pour calculer les coordonnées d'un point sur le cercle
+    const getCirclePoint = (percent: number) => {
+      const angle = (percent * 360 - 90) * Math.PI / 180;
+      return {
+        x: centerX + radius * Math.cos(angle),
+        y: centerY + radius * Math.sin(angle)
+      };
+    };
     
     topTypes.forEach((type, index) => {
-      const percentage = this.totalCount > 0 ? ((type.count / this.totalCount) * 100).toFixed(1) : '0';
-      const colors = ['#4CAF50', '#2196F3', '#FFC107', '#FF5722'];
+      const percentage = this.totalCount > 0 ? (type.count / this.totalCount) * 100 : 0;
+      const color = colors[index];
       
-      chartSegments += `<div class="chart-segment" style="background-color: ${colors[index]}; width: ${percentage}%; height: 30px; display: inline-block;"></div>`;
-      chartLegend += `<li><span class="legend-color" style="background-color: ${colors[index]};"></span> ${type.designation} (${percentage}%)</li>`;
+      // Créer le chemin SVG pour ce segment
+      if (percentage > 0) {
+        const startAngle = cumulativePercentage * 3.6;
+        const endAngle = (cumulativePercentage + percentage) * 3.6;
+        
+        const startPoint = getCirclePoint(startAngle / 360);
+        const endPoint = getCirclePoint(endAngle / 360);
+        
+        const largeArcFlag = percentage > 50 ? 1 : 0;
+        
+        svgPaths += `
+          <path 
+            d="M ${centerX} ${centerY} L ${startPoint.x} ${startPoint.y} A ${radius} ${radius} 0 ${largeArcFlag} 1 ${endPoint.x} ${endPoint.y} Z" 
+            fill="${color}"
+          />
+        `;
+      }
+      
+      chartLegend += `
+        <li>
+          <span class="legend-color" style="background-color: ${color};"></span>
+          ${type.designation} (${percentage.toFixed(1)}%)
+        </li>
+      `;
+      
+      cumulativePercentage += percentage;
     });
     
     // Ajouter "Autres" si nécessaire
     if (autresCount > 0) {
-      const percentage = this.totalCount > 0 ? ((autresCount / this.totalCount) * 100).toFixed(1) : '0';
-      chartSegments += `<div class="chart-segment" style="background-color: #9E9E9E; width: ${percentage}%; height: 30px; display: inline-block;"></div>`;
-      chartLegend += `<li><span class="legend-color" style="background-color: #9E9E9E;"></span> Autres (${percentage}%)</li>`;
+      const percentage = this.totalCount > 0 ? (autresCount / this.totalCount) * 100 : 0;
+      const color = colors[5];
+      
+      if (percentage > 0) {
+        const startAngle = cumulativePercentage * 3.6;
+        const endAngle = (cumulativePercentage + percentage) * 3.6;
+        
+        const startPoint = getCirclePoint(startAngle / 360);
+        const endPoint = getCirclePoint(endAngle / 360);
+        
+        const largeArcFlag = percentage > 50 ? 1 : 0;
+        
+        svgPaths += `
+          <path 
+            d="M ${centerX} ${centerY} L ${startPoint.x} ${startPoint.y} A ${radius} ${radius} 0 ${largeArcFlag} 1 ${endPoint.x} ${endPoint.y} Z" 
+            fill="${color}"
+          />
+        `;
+      }
+      
+      chartLegend += `
+        <li>
+          <span class="legend-color" style="background-color: ${color};"></span>
+          Autres (${percentage.toFixed(1)}%)
+        </li>
+      `;
     }
     
     // Afficher tous les types d'abonnés dans un tableau
@@ -124,23 +198,31 @@ export class StatistiqueAbonnesView {
           </div>
           
           <div class="stat-card">
-            <h3>Nouveaux Abonnés</h3>
-            <p class="stat-value">${nouveauxAbonnes.toLocaleString()}</p>
+            <h3>Abonnés Réel</h3>
+            <p class="stat-value">${abonnesReel.toLocaleString()}</p>
             <p class="stat-change positive">Abonnés non résiliés</p>
           </div>
           
           <div class="stat-card">
-            <h3>Types d'Abonnés</h3>
-            <p class="stat-value">${this.abonnesTypes.length}</p>
-            <p class="stat-change">Nombre de catégories</p>
+            <h3>Compteur à l'Arrêt</h3>
+            <p class="stat-value">${this.compteurArretCount.toLocaleString()}</p>
+            <p class="stat-change warning">Taux: ${tauxCompteurArret}%</p>
+          </div>
+          
+          <div class="stat-card">
+            <h3>Sans Compteur</h3>
+            <p class="stat-value">${this.sansCompteurCount.toLocaleString()}</p>
+            <p class="stat-change warning">Taux: ${tauxSansCompteur}%</p>
           </div>
         </div>
         
         <div class="chart-container">
           <h3>Répartition par Type d'Abonné</h3>
           <div class="chart-placeholder">
-            <div class="chart-example">
-              ${chartSegments}
+            <div class="pie-chart-container">
+              <svg width="200" height="200" viewBox="0 0 200 200" class="pie-chart">
+                ${svgPaths}
+              </svg>
             </div>
             <ul class="chart-legend">
               ${chartLegend}
