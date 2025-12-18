@@ -1,15 +1,18 @@
 // Dashboard.ts
 import { DbfService } from '../services/dbfService';
+import { AbonnesParTypeCard } from './AbonnesParTypeCard';
 
 export class Dashboard {
   private container: HTMLElement;
   private centresCount: number = 0;
   private abonnesCount: number = 0;
   private isLoading: boolean = true;
+  private abonnesParTypeCard: AbonnesParTypeCard;
 
   constructor() {
     this.container = document.createElement('div');
     this.container.className = 'dashboard';
+    this.abonnesParTypeCard = new AbonnesParTypeCard();
     this.render();
     this.loadCounts();
   }
@@ -121,6 +124,10 @@ export class Dashboard {
         </div>
       </div>
       
+      <div class="dashboard-stats">
+        <div id="abonnes-par-type-container"></div>
+      </div>
+      
       <div class="dashboard-charts">
         <div class="chart-container">
           <h3>Performance mensuelle</h3>
@@ -137,6 +144,12 @@ export class Dashboard {
         </div>
       </div>
     `;
+    
+    // Ajouter la carte des abonnés par type
+    const container = this.container.querySelector('#abonnes-par-type-container');
+    if (container) {
+      container.appendChild(this.abonnesParTypeCard.getElement());
+    }
   }
 
   public getElement(): HTMLElement {

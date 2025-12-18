@@ -138,6 +138,23 @@ export async function getAbonnesCount() {
   }
 }
 
+/**
+ * Récupère le nombre d'abonnés par type depuis ABONNE.DBF avec jointure TABCODE.DBF
+ * @returns Promise<{totalCount: number, types: Array<{code: string, designation: string, count: number}>}>
+ */
+export async function getAbonnesCountByType() {
+  try {
+    const response = await fetch(`${API_BASE_URL}/abonnes/count-by-type`);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('Erreur lors de la récupération du nombre d\'abonnés par type:', error);
+    throw error;
+  }
+}
+
 export default {
   getDbfFiles,
   getDbfFileInfo,
@@ -145,5 +162,6 @@ export default {
   getDbfRecord,
   getTabcodeData,
   getCentresCount,
-  getAbonnesCount
+  getAbonnesCount,
+  getAbonnesCountByType
 };

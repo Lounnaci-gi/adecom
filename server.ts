@@ -435,6 +435,122 @@ app.get('/api/abonnes/count', (req, res) => {
   }
 });
 
+// Route pour obtenir le nombre d'abonnés par type depuis ABONNE.DBF avec jointure TABCODE.DBF
+app.get('/api/abonnes/count-by-type', (req, res) => {
+  try {
+    const abonneFilePath = path.join(DBF_FOLDER_PATH, 'ABONNE.DBF');
+    const tabcodeFilePath = path.join(DBF_FOLDER_PATH, 'TABCODE.DBF');
+    
+    // Vérifier si les fichiers existent
+    if (!fs.existsSync(abonneFilePath)) {
+      return res.status(404).json({ 
+        error: 'Fichier ABONNE.DBF non trouvé'
+      });
+    }
+    
+    if (!fs.existsSync(tabcodeFilePath)) {
+      return res.status(404).json({ 
+        error: 'Fichier TABCODE.DBF non trouvé'
+      });
+    }
+    
+    // Lire les informations d'en-tête d'ABONNE.DBF
+    const abonneHeaderBuffer = Buffer.alloc(32);
+    const abonneFd = fs.openSync(abonneFilePath, 'r');
+    fs.readSync(abonneFd, abonneHeaderBuffer, 0, 32, 0);
+    const abonneHeader = {
+      numberOfRecords: abonneHeaderBuffer.readUInt32LE(4),
+      headerLength: abonneHeaderBuffer.readUInt16LE(8),
+      recordLength: abonneHeaderBuffer.readUInt16LE(10)
+    };
+    fs.closeSync(abonneFd);
+    
+    // Lire les informations d'en-tête de TABCODE.DBF
+    const tabcodeHeaderBuffer = Buffer.alloc(32);
+    const tabcodeFd = fs.openSync(tabcodeFilePath, 'r');
+    fs.readSync(tabcodeFd, tabcodeHeaderBuffer, 0, 32, 0);
+    const tabcodeHeader = {
+      numberOfRecords: tabcodeHeaderBuffer.readUInt32LE(4),
+      headerLength: tabcodeHeaderBuffer.readUInt16LE(8),
+      recordLength: tabcodeHeaderBuffer.readUInt16LE(10)
+    };
+    fs.closeSync(tabcodeFd);
+    
+    // Lire tous les codes de type d'abonné avec leurs désignations depuis TABCODE.DBF
+    const typabonDesignations = {};
+    for (let i = 0; i < tabcodeHeader.numberOfRecords; i++) {
+      const recordOffset = tabcodeHeader.headerLength + (i * tabcodeHeader.recordLength);
+      
+      const recordBuffer = Buffer.alloc(tabcodeHeader.recordLength + 10);
+      const fd = fs.openSync(tabcodeFilePath, 'r');
+      fs.readSync(fd, recordBuffer, 0, tabcodeHeader.recordLength, recordOffset);
+      fs.closeSync(fd);
+      
+      // Extraire les données de l'enregistrement TABCODE
+      const isDeleted = recordBuffer.readUInt8(0) === 0x2A;
+      if (!isDeleted) {
+        let fieldOffset = 1; // +1 pour ignorer l'indicateur de suppression
+        
+        const codeAffec = recordBuffer.subarray(fieldOffset, fieldOffset + 4).toString('utf-8').trim();
+        fieldOffset += 4;
+        
+        const libelle = recordBuffer.subarray(fieldOffset, fieldOffset + 20).toString('utf-8').trim();
+        
+        // Si le code commence par 'T', on le stocke (en enlevant le 'T')
+        if (codeAffec && codeAffec.startsWith('T')) {
+          const typabonCode = codeAffec.substring(1); // Enlever le 'T'
+          typabonDesignations[typabonCode] = libelle;
+        }
+      }
+    }
+    
+    // Compter les abonnés par type depuis ABONNE.DBF
+    const typabonCount = {};
+    for (let i = 0; i < abonneHeader.numberOfRecords; i++) {
+      const recordOffset = abonneHeader.headerLength + (i * abonneHeader.recordLength);
+      
+      const recordBuffer = Buffer.alloc(abonneHeader.recordLength + 10);
+      const fd = fs.openSync(abonneFilePath, 'r');
+      fs.readSync(fd, recordBuffer, 0, abonneHeader.recordLength, recordOffset);
+      fs.closeSync(fd);
+      
+      // Extraire les données de l'enregistrement ABONNE
+      const isDeleted = recordBuffer.readUInt8(0) === 0x2A;
+      if (!isDeleted) {
+        // Calculer l'offset pour le champ TYPABON (champ 12)
+        // Somme des longueurs des champs précédents: 2+2+3+6+30+4+10+3+2+2+4 = 68
+        let fieldOffset = 1 + 68; // +1 pour l'indicateur de suppression + 68 pour les champs précédents
+        
+        const typabon = recordBuffer.subarray(fieldOffset, fieldOffset + 2).toString('utf-8').trim();
+        
+        if (typabon) {
+          typabonCount[typabon] = (typabonCount[typabon] || 0) + 1;
+        }
+      }
+    }
+    
+    // Créer le résultat avec les désignations
+    const result = Object.keys(typabonCount)
+      .map(typabon => ({
+        code: typabon,
+        designation: typabonDesignations[typabon] || `Type ${typabon}`,
+        count: typabonCount[typabon]
+      }))
+      .sort((a, b) => b.count - a.count); // Tri par nombre décroissant
+    
+    res.json({
+      totalCount: Object.values(typabonCount).reduce((sum, count) => sum + count, 0),
+      types: result
+    });
+  } catch (error) {
+    console.error('Erreur lors du comptage des abonnés par type:', error);
+    res.status(500).json({ 
+      error: 'Erreur serveur lors du comptage des abonnés par type',
+      message: (error as Error).message
+    });
+  }
+});
+
 // Démarrer le serveur
 app.listen(PORT, () => {
   console.log(`Serveur DBF démarré sur http://localhost:${PORT}`);

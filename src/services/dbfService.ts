@@ -1,9 +1,15 @@
 // dbfService.ts
-import { getTabcodeData, getCentresCount, getAbonnesCount } from '../api';
+import { getTabcodeData, getCentresCount, getAbonnesCount, getAbonnesCountByType } from '../api';
 
 export interface Centre {
   code: string;
   libelle: string;
+}
+
+export interface AbonneType {
+  code: string;
+  designation: string;
+  count: number;
 }
 
 export class DbfService {
@@ -34,6 +40,23 @@ export class DbfService {
       console.error('Erreur lors de la récupération du nombre d\'abonnés:', error);
       // Retourner 0 en cas d'erreur
       return 0;
+    }
+  }
+  
+  /**
+   * Récupère le nombre d'abonnés par type depuis les fichiers ABONNE.DBF et TABCODE.DBF
+   */
+  static async getAbonnesCountByType(): Promise<{totalCount: number, types: AbonneType[]}> {
+    try {
+      const result = await getAbonnesCountByType();
+      return result;
+    } catch (error) {
+      console.error('Erreur lors de la récupération du nombre d\'abonnés par type:', error);
+      // Retourner un objet vide en cas d'erreur
+      return {
+        totalCount: 0,
+        types: []
+      };
     }
   }
   

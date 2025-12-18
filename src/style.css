@@ -462,6 +462,55 @@ tr:hover {
   color: #f44336;
 }
 
+/* Styles pour les cartes d'abonnés par type */
+.abonnes-types-card {
+  grid-column: span 2;
+}
+
+.abonnes-types-card h3 {
+  margin-top: 0;
+  color: #646cff;
+}
+
+.types-list {
+  margin: 1rem 0;
+}
+
+.type-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.type-item.empty {
+  height: 2.5rem;
+}
+
+.type-item:last-child {
+  border-bottom: none;
+}
+
+.type-code {
+  font-weight: bold;
+  color: #646cff;
+  min-width: 30px;
+}
+
+.type-designation {
+  flex-grow: 1;
+  margin: 0 1rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.type-count {
+  font-weight: bold;
+  text-align: right;
+  min-width: 60px;
+}
+
 @media (prefers-color-scheme: light) {
   :root {
     color: #213547;
