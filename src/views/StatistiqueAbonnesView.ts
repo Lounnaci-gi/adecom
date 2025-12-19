@@ -17,8 +17,7 @@ export class StatistiqueAbonnesView {
   private totalResilieCount: number = 0;
   private compteurArretCount: number = 0;
   private sansCompteurCount: number = 0;
-  private totalSansCompteurCount: number = 0;
-  private totalCompteurArretCount: number = 0;
+
   private abonnesTypes: AbonneType[] = [];
   private sortBy: string = 'count';
   private sortDirection: 'asc' | 'desc' = 'desc';
@@ -39,8 +38,8 @@ export class StatistiqueAbonnesView {
       const result = await DbfService.getAbonnesCountByType();
       this.totalCount = result.totalCount;
       this.totalResilieCount = result.totalResilieCount || 0;
-      this.totalSansCompteurCount = result.totalSansCompteurCount || 0;
-      this.totalCompteurArretCount = result.totalCompteurArretCount || 0;
+      this.sansCompteurCount = result.totalSansCompteurCount || 0;
+      this.compteurArretCount = result.totalCompteurArretCount || 0;
       this.abonnesTypes = result.types;
       
       // Récupérer le nombre d'abonnés avec compteur à l'arrêt
@@ -222,7 +221,8 @@ export class StatistiqueAbonnesView {
     // Afficher tous les types d'abonnés dans un tableau
     let typesTableRows = '';
     sortedAbonnesTypes.forEach((type, index) => {
-      const percentageResilie = type.count > 0 ? ((type.resilieCount / type.count) * 100).toFixed(1) : '0';
+      const percentageResilieValue = type.count > 0 ? ((type.resilieCount / type.count) * 100) : 0;
+      const percentageResilie = percentageResilieValue.toFixed(1);
       const percentageSansCompteur = type.count > 0 ? ((type.sansCompteurCount / type.count) * 100).toFixed(1) : '0';
       const percentageCompteurArret = type.count > 0 ? ((type.compteurArretCount / type.count) * 100).toFixed(1) : '0';
       
@@ -250,7 +250,7 @@ export class StatistiqueAbonnesView {
           <td>${type.designation}</td>
           <td class="text-right">${type.count.toLocaleString()}</td>
           <td class="text-right">${type.resilieCount.toLocaleString()}</td>
-          <td class="text-right ${percentageResilie > 10 ? 'negative' : percentageResilie > 5 ? 'warning' : 'positive'}">${percentageResilie}%</td>
+          <td class="text-right ${percentageResilieValue > 10 ? 'negative' : percentageResilieValue > 5 ? 'warning' : 'positive'}">${percentageResilie}%</td>
           <td class="text-right">${type.sansCompteurCount.toLocaleString()} (${percentageSansCompteur}%)</td>
           <td class="text-right">${type.compteurArretCount.toLocaleString()} (${percentageCompteurArret}%)</td>
         </tr>

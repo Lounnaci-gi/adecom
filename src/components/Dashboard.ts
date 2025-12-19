@@ -46,7 +46,7 @@ export class Dashboard {
       // Afficher la barre de progression pendant le chargement
       this.updateLoadingState();
       
-      const creancesPromise = DbfService.getAbonnesCreances()
+      const creancesPromise = this.loadCreancesWithProgress()
         .then(count => {
           this.creancesCount = count;
           this.updateCreancesDisplay();
@@ -113,11 +113,7 @@ export class Dashboard {
     }
   }
 
-  private updateCountsDisplay(): void {
-    this.updateCentresDisplay();
-    this.updateAbonnesDisplay();
-    this.updateCreancesDisplay();
-  }
+
   
   private updateCentresDisplay(): void {
     const centresCard = this.container.querySelector('.centres-stat-card');
@@ -159,9 +155,9 @@ export class Dashboard {
     const creancesCard = this.container.querySelector('.creances-stat-card');
     
     if (creancesCard) {
-      const progressBar = creancesCard.querySelector('.progress-bar');
-      const progressFill = creancesCard.querySelector('.progress-fill');
-      const statChange = creancesCard.querySelector('.stat-change');
+      const progressBar = creancesCard.querySelector('.progress-bar') as HTMLElement;
+      const progressFill = creancesCard.querySelector('.progress-fill') as HTMLElement;
+      const statChange = creancesCard.querySelector('.stat-change') as HTMLElement;
       
       if (progressBar && progressFill && statChange) {
         // Mettre à jour la largeur de la barre de progression
@@ -246,27 +242,38 @@ export class Dashboard {
     // Créer une promesse pour le chargement des données
     const loadDataPromise = DbfService.getAbonnesCreances();
     
-    // Simuler une progression identique à celle du serveur
-    // Basée sur les messages : Progression: 10000 enregistrements traités, etc.
+    // Simuler une progression plus réaliste basée sur le nombre total d'enregistrements
+    // Le serveur traite environ 1.126.503 enregistrements
     const steps = [
-      { count: 10000, progress: 10 },
-      { count: 20000, progress: 20 },
-      { count: 30000, progress: 30 },
-      { count: 40000, progress: 40 },
-      { count: 50000, progress: 50 },
-      { count: 60000, progress: 60 },
-      { count: 70000, progress: 70 },
-      { count: 80000, progress: 80 }
+      { records: 10000, progress: 1 },
+      { records: 20000, progress: 2 },
+      { records: 30000, progress: 3 },
+      { records: 40000, progress: 4 },
+      { records: 50000, progress: 5 },
+      { records: 60000, progress: 6 },
+      { records: 70000, progress: 7 },
+      { records: 80000, progress: 8 },
+      { records: 90000, progress: 9 },
+      { records: 100000, progress: 10 },
+      { records: 200000, progress: 18 },
+      { records: 300000, progress: 27 },
+      { records: 400000, progress: 36 },
+      { records: 500000, progress: 44 },
+      { records: 600000, progress: 53 },
+      { records: 700000, progress: 62 },
+      { records: 800000, progress: 71 },
+      { records: 900000, progress: 80 },
+      { records: 1000000, progress: 89 },
+      { records: 1100000, progress: 98 },
+      { records: 1126503, progress: 100 }
     ];
+    
     let stepIndex = 0;
     
     const interval = setInterval(() => {
       if (stepIndex < steps.length) {
         const step = steps[stepIndex];
         this.updateCreancesProgress(step.progress);
-        
-        // Afficher le message de progression identique à celui du serveur
-        console.log(`Progression: ${step.count} enregistrements traités`);
         stepIndex++;
       }
     }, 300);
@@ -277,8 +284,8 @@ export class Dashboard {
     // Arrêter la simulation de progression
     clearInterval(interval);
     
-    // Mettre à jour la progression à 100%
-    this.updateCreancesProgress(100);
+    // Attendre un peu pour s'assurer que la dernière mise à jour est visible
+    await new Promise(resolve => setTimeout(resolve, 100));
     
     return result;
   }

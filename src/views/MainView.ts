@@ -32,8 +32,8 @@ export class MainView {
 
   private setupEventListeners(): void {
     // Écouter les événements de navigation
-    window.addEventListener('navigate', (e: CustomEvent) => {
-      const view = e.detail.view;
+    window.addEventListener('navigate', (e: any) => {
+      const view = (e as CustomEvent).detail.view;
       this.navigateTo(view);
     });
   }

@@ -1,8 +1,6 @@
 // api.ts
-import config from './config';
-
 // URL de base de l'API
-const API_BASE_URL = config.API_BASE_URL || 'http://localhost:3000';
+const API_BASE_URL = 'http://localhost:3000';
 
 /**
  * Récupère la liste des fichiers DBF disponibles

@@ -1,8 +1,5 @@
 import './style.css'
 
-// Importer la configuration
-import config from './config';
-
 // Importer l'API
 import { getDbfFiles } from './api';
 
@@ -11,7 +8,6 @@ import { MainView } from './views/MainView';
 
 // État de la connexion
 let dbfConnectionStatus = false;
-let dbfFiles: string[] = [];
 let connectionStatusDiv: HTMLDivElement | null = null;
 let connectionCheckInterval: number | null = null;
 
@@ -45,7 +41,7 @@ async function checkDbfConnection() {
       console.log('📁 Dossier:', result.folderPath);
       console.log('📄 Fichiers DBF trouvés:', result.dbfFiles);
       dbfConnectionStatus = true;
-      dbfFiles = result.files;
+
     } else {
       console.log('❌ Réponse inattendue du serveur');
       dbfConnectionStatus = false;
@@ -63,7 +59,7 @@ async function checkDbfConnection() {
 // Initialiser la vérification
 checkDbfConnection().then(() => {
   // Créer la vue principale avec navbar et dashboard
-  const mainView = new MainView();
+  new MainView();
   
   // Vérifier périodiquement la connexion toutes les 30 secondes
   connectionCheckInterval = window.setInterval(checkDbfConnection, 30000);

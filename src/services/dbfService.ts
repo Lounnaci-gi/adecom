@@ -152,31 +152,7 @@ export class DbfService {
     }
   }
   
-  /**
-   * Enregistre le centre sélectionné dans le fichier .env
-   */
-  static async saveCentreToEnv(centreCode: string): Promise<boolean> {
-    try {
-      // Appeler l'API backend pour enregistrer le centre dans .env
-      const response = await fetch('/api/settings/save-centre', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ centreCode })
-      });
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      
-      const result = await response.json();
-      return result.success || false;
-    } catch (error) {
-      console.error('Erreur lors de l\'enregistrement du centre dans .env:', error);
-      return false;
-    }
-  }
+
   
   /**
    * Récupère la somme des créances des abonnés
@@ -202,6 +178,19 @@ export class DbfService {
     } catch (error) {
       console.error('Erreur lors de la récupération du chemin DBF:', error);
       return 'D:/epeor';
+    }
+  }
+
+  /**
+   * Enregistre le centre sélectionné dans le fichier .env
+   */
+  static async saveCentreToEnv(centreCode: string): Promise<boolean> {
+    try {
+      const result = await saveCentreToEnv(centreCode);
+      return result.success || false;
+    } catch (error) {
+      console.error('Erreur lors de l\'enregistrement du centre dans .env:', error);
+      return false;
     }
   }
 }
