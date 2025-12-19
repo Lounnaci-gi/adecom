@@ -4,11 +4,17 @@ import { DbfService } from '../services/dbfService';
 export class SettingsView {
   private container: HTMLElement;
   private currentDbfPath: string = 'D:/epeor';
+  private centres: { code: string; libelle: string }[] = [];
 
   constructor() {
     this.container = document.createElement('div');
     this.container.className = 'settings-view';
-    this.loadCurrentDbfPath();
+    this.initialize();
+  }
+
+  private async initialize(): Promise<void> {
+    await this.loadCurrentDbfPath();
+    await this.loadCentresList();
     this.render();
     this.attachEventListeners();
   }
@@ -21,7 +27,20 @@ export class SettingsView {
     }
   }
 
+  private async loadCentresList(): Promise<void> {
+    try {
+      this.centres = await DbfService.getCentresList();
+    } catch (error) {
+      console.error('Erreur lors du chargement de la liste des centres:', error);
+    }
+  }
+
   private render(): void {
+    // Générer les options de la liste déroulante des centres
+    const centresOptions = this.centres.map(centre => 
+      `<option value="${centre.code}">${centre.code} - ${centre.libelle}</option>`
+    ).join('\n');
+    
     this.container.innerHTML = `
       <div class="settings-header">
         <h2>Paramètres</h2>
@@ -45,6 +64,14 @@ export class SettingsView {
             </select>
           </div>
           
+          <div class="setting-item">
+            <label for="centreSelection">Centre</label>
+            <select id="centreSelection" class="form-control">
+              <option value="">Sélectionnez un centre</option>
+              ${centresOptions}
+            </select>
+          </div>
+          
           <button class="btn btn-primary">Enregistrer</button>
         </div>
         
@@ -56,6 +83,14 @@ export class SettingsView {
               <input type="text" id="dbfPath" value="${this.currentDbfPath}" class="form-control">
               <button id="browseFolderBtn" class="btn btn-secondary">Parcourir</button>
             </div>
+          </div>
+          
+          <div class="setting-item">
+            <label for="centreDbfSelection">Centre</label>
+            <select id="centreDbfSelection" class="form-control">
+              <option value="">Sélectionnez un centre</option>
+              ${centresOptions}
+            </select>
           </div>
           
           <div class="setting-item">
@@ -103,18 +138,191 @@ export class SettingsView {
         this.testConnection();
       });
     }
+    
+    // Attacher l'événement pour la liste déroulante des centres (Paramètres)
+    const centreSelection = this.container.querySelector('#centreSelection') as HTMLSelectElement;
+    console.log('Élément centreSelection trouvé:', centreSelection);
+    if (centreSelection) {
+      centreSelection.addEventListener('change', async (event) => {
+        const selectedValue = (event.target as HTMLSelectElement).value;
+        console.log('Centre sélectionné (Paramètres):', selectedValue);
+        if (selectedValue) {
+          // Enregistrer le centre sélectionné dans le fichier .env
+          try {
+            const success = await DbfService.saveCentreToEnv(selectedValue);
+            if (success) {
+              console.log('Centre enregistré dans .env avec succès');
+            } else {
+              console.error('Échec de l\'enregistrement du centre dans .env');
+            }
+          } catch (error) {
+            console.error('Erreur lors de l\'enregistrement du centre dans .env:', error);
+          }
+        }
+      });
+    }
+    
+    // Attacher l'événement pour la liste déroulante des centres (Connexion DBF)
+    const centreDbfSelection = this.container.querySelector('#centreDbfSelection') as HTMLSelectElement;
+    console.log('Élément centreDbfSelection trouvé:', centreDbfSelection);
+    if (centreDbfSelection) {
+      centreDbfSelection.addEventListener('change', async (event) => {
+        const selectedValue = (event.target as HTMLSelectElement).value;
+        console.log('Centre sélectionné (Connexion DBF):', selectedValue);
+        if (selectedValue) {
+          // Enregistrer le centre sélectionné dans le fichier .env
+          try {
+            const success = await DbfService.saveCentreToEnv(selectedValue);
+            if (success) {
+              console.log('Centre enregistré dans .env avec succès');
+            } else {
+              console.error('Échec de l\'enregistrement du centre dans .env');
+            }
+          } catch (error) {
+            console.error('Erreur lors de l\'enregistrement du centre dans .env:', error);
+          }
+        }
+      });
+    }
   }
 
-  private browseFolder(): void {
-    // Afficher un message d'information puisqu'on ne peut pas ouvrir un dialogue de fichier dans le navigateur
-    const dbfPathInput = this.container.querySelector('#dbfPath') as HTMLInputElement;
-    if (dbfPathInput) {
-      const newPath = prompt("Veuillez entrer le chemin du dossier DBF:", this.currentDbfPath);
-      if (newPath !== null) {
-        dbfPathInput.value = newPath;
-        this.currentDbfPath = newPath;
+  private async browseFolder(): Promise<void> {
+    // Vérifier si l'API File System Access est disponible (Chrome 86+)
+    if ('showDirectoryPicker' in window) {
+      try {
+        // Utiliser l'API moderne de sélection de dossier
+        const dirHandle = await (window as any).showDirectoryPicker();
+        
+        // Obtenir le chemin du dossier (si possible)
+        if (dirHandle && dirHandle.name) {
+          // Note: Pour des raisons de sécurité, l'API ne donne pas le chemin complet
+          // Mais on peut utiliser le handle pour accéder aux fichiers
+          
+          // Pour notre cas, on utilisera le dialogue personnalisé avec le nom du dossier comme suggestion
+          const suggestedPath = this.currentDbfPath.replace(/[^\/]*$/, dirHandle.name);
+          this.showCustomDialog(suggestedPath);
+        }
+      } catch (error) {
+        // L'utilisateur a annulé ou l'API n'est pas disponible
+        console.log('API File System Access non disponible ou annulée');
+        this.showCustomDialog();
       }
+    } else {
+      // Fallback: utiliser le dialogue personnalisé
+      this.showCustomDialog();
     }
+  }
+  
+  private showCustomDialog(suggestedPath?: string): void {
+    // Créer un dialogue modal pour sélectionner le dossier
+    this.createFolderDialog(suggestedPath);
+  }
+  
+  private createFolderDialog(suggestedPath?: string): void {
+    // Créer le fond du dialogue (overlay)
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    
+    // Créer le contenu du dialogue
+    const dialog = document.createElement('div');
+    dialog.className = 'folder-dialog';
+    dialog.innerHTML = `
+      <div class="dialog-header">
+        <h3>Sélectionner un dossier</h3>
+        <button class="dialog-close" id="closeDialogBtn">&times;</button>
+      </div>
+      <div class="dialog-body">
+        <div class="folder-browser">
+          <div class="folder-path">
+            <input type="text" id="folderPathInput" value="${suggestedPath || this.currentDbfPath}" class="form-control" placeholder="Entrez le chemin du dossier">
+          </div>
+          <div class="folder-examples">
+            <p>Exemples de chemins :</p>
+            <ul>
+              <li>C:/databases/epeor</li>
+              <li>D:/data/dbf</li>
+              <li>F:/epeor</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+      <div class="dialog-footer">
+        <button class="btn btn-secondary" id="cancelDialogBtn">Annuler</button>
+        <button class="btn btn-primary" id="confirmDialogBtn">Confirmer</button>
+      </div>
+    `;
+    
+    // Ajouter le dialogue au document
+    overlay.appendChild(dialog);
+    document.body.appendChild(overlay);
+    
+    // Attacher les événements
+    this.attachDialogEvents(overlay);
+  }
+  
+  private attachDialogEvents(overlay: HTMLElement): void {
+    // Fermer le dialogue
+    const closeBtn = overlay.querySelector('#closeDialogBtn');
+    const cancelBtn = overlay.querySelector('#cancelDialogBtn');
+    const confirmBtn = overlay.querySelector('#confirmDialogBtn');
+    const folderPathInput = overlay.querySelector('#folderPathInput') as HTMLInputElement;
+    
+    const closeDialog = () => {
+      document.body.removeChild(overlay);
+    };
+    
+    if (closeBtn) {
+      closeBtn.addEventListener('click', closeDialog);
+    }
+    
+    if (cancelBtn) {
+      cancelBtn.addEventListener('click', closeDialog);
+    }
+    
+    if (confirmBtn) {
+      confirmBtn.addEventListener('click', async () => {
+        if (folderPathInput) {
+          const newPath = folderPathInput.value.trim();
+          if (newPath) {
+            const dbfPathInput = this.container.querySelector('#dbfPath') as HTMLInputElement;
+            if (dbfPathInput) {
+              dbfPathInput.value = newPath;
+              this.currentDbfPath = newPath;
+              
+              // Enregistrer le chemin dans le fichier .env
+              try {
+                const success = await DbfService.saveDbfPathToEnv(newPath);
+                if (success) {
+                  console.log('Chemin enregistré dans .env avec succès');
+                } else {
+                  console.error('Échec de l\'enregistrement du chemin dans .env');
+                }
+              } catch (error) {
+                console.error('Erreur lors de l\'enregistrement du chemin dans .env:', error);
+              }
+            }
+          }
+        }
+        closeDialog();
+      });
+    }
+    
+    // Fermer en cliquant en dehors du dialogue
+    overlay.addEventListener('click', (event) => {
+      if (event.target === overlay) {
+        closeDialog();
+      }
+    });
+    
+    // Fermer avec la touche Échap
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        closeDialog();
+        document.removeEventListener('keydown', handleKeyDown);
+      }
+    };
+    
+    document.addEventListener('keydown', handleKeyDown);
   }
   
   private async testConnection(): Promise<void> {

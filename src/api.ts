@@ -38,6 +38,22 @@ export async function getCentresCount() {
 }
 
 /**
+ * Récupère la liste des centres depuis TABCODE.DBF
+ */
+export async function getCentresList() {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/centres/list`);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('Erreur lors de la récupération de la liste des centres:', error);
+    throw error;
+  }
+}
+
+/**
  * Récupère le nombre d'abonnés depuis ABONNE.DBF
  */
 export async function getAbonnesCount() {
@@ -136,6 +152,30 @@ export async function getDbfPath() {
     return await response.json();
   } catch (error) {
     console.error('Erreur lors de la récupération du chemin DBF:', error);
+    throw error;
+  }
+}
+
+/**
+ * Enregistre le centre sélectionné dans le fichier .env
+ */
+export async function saveCentreToEnv(centreCode: string) {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/settings/save-centre`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ centreCode })
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error('Erreur lors de l\'enregistrement du centre dans .env:', error);
     throw error;
   }
 }

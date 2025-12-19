@@ -1,5 +1,5 @@
 // dbfService.ts
-import { getDbfFiles, getCentresCount, getAbonnesCount, getAbonnesCountByType, getAbonnesCompteurArret, getAbonnesSansCompteur, updateDbfPath, getDbfPath } from '../api';
+import { getDbfFiles, getCentresCount, getAbonnesCount, getAbonnesCountByType, getAbonnesCompteurArret, getAbonnesSansCompteur, updateDbfPath, getDbfPath, getCentresList, saveCentreToEnv } from '../api';
 import { dbfConfig } from '../database/dbfConnection';
 
 /**
@@ -98,6 +98,20 @@ export class DbfService {
       return 0;
     }
   }
+  
+  /**
+   * Récupère la liste des centres
+   */
+  static async getCentresList(): Promise<{ code: string; libelle: string }[]> {
+    try {
+      const result = await getCentresList();
+      return result.centres || [];
+    } catch (error) {
+      console.error('Erreur lors de la récupération de la liste des centres:', error);
+      // Retourner un tableau vide en cas d'erreur
+      return [];
+    }
+  }
 
   /**
    * Met à jour le chemin du dossier DBF
@@ -108,6 +122,58 @@ export class DbfService {
       return result.success || false;
     } catch (error) {
       console.error('Erreur lors de la mise à jour du chemin DBF:', error);
+      return false;
+    }
+  }
+  
+  /**
+   * Enregistre le chemin du dossier DBF dans le fichier .env
+   */
+  static async saveDbfPathToEnv(dbfPath: string): Promise<boolean> {
+    try {
+      // Appeler l'API backend pour enregistrer le chemin dans .env
+      const response = await fetch('/api/settings/save-env', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ dbfPath })
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const result = await response.json();
+      return result.success || false;
+    } catch (error) {
+      console.error('Erreur lors de l\'enregistrement du chemin DBF dans .env:', error);
+      return false;
+    }
+  }
+  
+  /**
+   * Enregistre le centre sélectionné dans le fichier .env
+   */
+  static async saveCentreToEnv(centreCode: string): Promise<boolean> {
+    try {
+      // Appeler l'API backend pour enregistrer le centre dans .env
+      const response = await fetch('/api/settings/save-centre', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ centreCode })
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const result = await response.json();
+      return result.success || false;
+    } catch (error) {
+      console.error('Erreur lors de l\'enregistrement du centre dans .env:', error);
       return false;
     }
   }
