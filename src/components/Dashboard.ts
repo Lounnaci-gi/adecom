@@ -20,17 +20,47 @@ export class Dashboard {
       this.isLoading = true;
       this.updateLoadingState();
       
-      // Récupérer le nombre réel de centres depuis TABCODE.DBF
-      this.centresCount = await DbfService.getCentresCount();
+      // Effectuer les requêtes en parallèle
+      const centresPromise = DbfService.getCentresCount()
+        .then(count => {
+          this.centresCount = count;
+          this.updateCentresDisplay();
+        })
+        .catch(error => {
+          console.error('Erreur lors de la récupération du nombre de centres:', error);
+          this.centresCount = 0;
+          this.updateCentresDisplay();
+        });
       
-      // Récupérer le nombre d'abonnés depuis ABONNE.DBF
-      this.abonnesCount = await DbfService.getAbonnesCount();
+      const abonnesPromise = DbfService.getAbonnesCount()
+        .then(count => {
+          this.abonnesCount = count;
+          this.updateAbonnesDisplay();
+        })
+        .catch(error => {
+          console.error('Erreur lors de la récupération du nombre d\'abonnés:', error);
+          this.abonnesCount = 0;
+          this.updateAbonnesDisplay();
+        });
       
-      // Récupérer la somme des créances des abonnés depuis FACTURES.DBF
-      this.creancesCount = await DbfService.getAbonnesCreances();
+      // Afficher la barre de progression pendant le chargement
+      this.updateLoadingState();
+      
+      const creancesPromise = DbfService.getAbonnesCreances()
+        .then(count => {
+          this.creancesCount = count;
+          this.updateCreancesDisplay();
+        })
+        .catch(error => {
+          console.error('Erreur lors de la récupération des créances:', error);
+          this.creancesCount = 0;
+          this.updateCreancesDisplay();
+        });
+      
+      // Attendre que toutes les requêtes soient terminées
+      await Promise.all([centresPromise, abonnesPromise, creancesPromise]);
       
       this.isLoading = false;
-      this.updateCountsDisplay();
     } catch (error) {
       console.error('Erreur lors du chargement des données:', error);
       this.isLoading = false;
@@ -41,6 +71,7 @@ export class Dashboard {
   private updateLoadingState(): void {
     const centresCard = this.container.querySelector('.centres-stat-card');
     const abonnesCard = this.container.querySelector('.abonnes-stat-card');
+    const creancesCard = this.container.querySelector('.creances-stat-card');
     
     if (centresCard) {
       if (this.isLoading) {
@@ -65,12 +96,31 @@ export class Dashboard {
         `;
       }
     }
+    
+    if (creancesCard) {
+      if (this.isLoading) {
+        creancesCard.innerHTML = `
+          <h3>Portefeuille Abonnés</h3>
+          <p class="stat-value">
+            <span class="loading-spinner"></span>
+          </p>
+          <div class="progress-bar">
+            <div class="progress-fill" style="width: 0%"></div>
+          </div>
+          <p class="stat-change">Chargement... 0%</p>
+        `;
+      }
+    }
   }
 
   private updateCountsDisplay(): void {
+    this.updateCentresDisplay();
+    this.updateAbonnesDisplay();
+    this.updateCreancesDisplay();
+  }
+  
+  private updateCentresDisplay(): void {
     const centresCard = this.container.querySelector('.centres-stat-card');
-    const abonnesCard = this.container.querySelector('.abonnes-stat-card');
-    const creancesCard = this.container.querySelector('.creances-stat-card');
     
     if (centresCard) {
       centresCard.innerHTML = `
@@ -79,6 +129,10 @@ export class Dashboard {
         <p class="stat-change positive">Centres actifs</p>
       `;
     }
+  }
+  
+  private updateAbonnesDisplay(): void {
+    const abonnesCard = this.container.querySelector('.abonnes-stat-card');
     
     if (abonnesCard) {
       abonnesCard.innerHTML = `
@@ -87,6 +141,10 @@ export class Dashboard {
         <p class="stat-change positive">Abonnés actifs</p>
       `;
     }
+  }
+  
+  private updateCreancesDisplay(): void {
+    const creancesCard = this.container.querySelector('.creances-stat-card');
     
     if (creancesCard) {
       creancesCard.innerHTML = `
@@ -94,6 +152,27 @@ export class Dashboard {
         <p class="stat-value">${this.creancesCount.toLocaleString('fr-FR', { style: 'currency', currency: 'DZD' })}</p>
         <p class="stat-change positive">Créances non réglées</p>
       `;
+    }
+  }
+  
+  private updateCreancesProgress(progress: number): void {
+    const creancesCard = this.container.querySelector('.creances-stat-card');
+    
+    if (creancesCard) {
+      const progressBar = creancesCard.querySelector('.progress-bar');
+      const progressFill = creancesCard.querySelector('.progress-fill');
+      const statChange = creancesCard.querySelector('.stat-change');
+      
+      if (progressBar && progressFill && statChange) {
+        // Mettre à jour la largeur de la barre de progression
+        progressFill.style.width = `${progress}%`;
+        
+        // Mettre à jour le texte de progression
+        statChange.textContent = `Chargement... ${Math.round(progress)}%`;
+        
+        // Forcer la mise à jour du DOM
+        statChange.offsetHeight;
+      }
     }
   }
 
@@ -108,25 +187,28 @@ export class Dashboard {
         <div class="stat-card centres-stat-card">
           <h3>Centres</h3>
           <p class="stat-value">
-            ${this.isLoading ? '<span class="loading-spinner"></span>' : this.centresCount}
+            <span class="loading-spinner"></span>
           </p>
-          <p class="stat-change">${this.isLoading ? 'Chargement...' : 'Centres actifs'}</p>
+          <p class="stat-change">Chargement...</p>
         </div>
         
         <div class="stat-card abonnes-stat-card">
           <h3>Abonnés</h3>
           <p class="stat-value">
-            ${this.isLoading ? '<span class="loading-spinner"></span>' : this.abonnesCount.toLocaleString()}
+            <span class="loading-spinner"></span>
           </p>
-          <p class="stat-change">${this.isLoading ? 'Chargement...' : 'Abonnés actifs'}</p>
+          <p class="stat-change">Chargement...</p>
         </div>
         
         <div class="stat-card creances-stat-card">
           <h3>Portefeuille Abonnés</h3>
           <p class="stat-value">
-            ${this.isLoading ? '<span class="loading-spinner"></span>' : this.creancesCount.toLocaleString('fr-FR', { style: 'currency', currency: 'DZD' })}
+            <span class="loading-spinner"></span>
           </p>
-          <p class="stat-change">${this.isLoading ? 'Chargement...' : 'Créances non réglées'}</p>
+          <div class="progress-bar">
+            <div class="progress-fill" style="width: 0%"></div>
+          </div>
+          <p class="stat-change">Chargement... 0%</p>
         </div>
         
         <div class="stat-card">
@@ -160,6 +242,47 @@ export class Dashboard {
     `;
   }
 
+  private async loadCreancesWithProgress(): Promise<number> {
+    // Créer une promesse pour le chargement des données
+    const loadDataPromise = DbfService.getAbonnesCreances();
+    
+    // Simuler une progression identique à celle du serveur
+    // Basée sur les messages : Progression: 10000 enregistrements traités, etc.
+    const steps = [
+      { count: 10000, progress: 10 },
+      { count: 20000, progress: 20 },
+      { count: 30000, progress: 30 },
+      { count: 40000, progress: 40 },
+      { count: 50000, progress: 50 },
+      { count: 60000, progress: 60 },
+      { count: 70000, progress: 70 },
+      { count: 80000, progress: 80 }
+    ];
+    let stepIndex = 0;
+    
+    const interval = setInterval(() => {
+      if (stepIndex < steps.length) {
+        const step = steps[stepIndex];
+        this.updateCreancesProgress(step.progress);
+        
+        // Afficher le message de progression identique à celui du serveur
+        console.log(`Progression: ${step.count} enregistrements traités`);
+        stepIndex++;
+      }
+    }, 300);
+    
+    // Attendre que les données soient chargées
+    const result = await loadDataPromise;
+    
+    // Arrêter la simulation de progression
+    clearInterval(interval);
+    
+    // Mettre à jour la progression à 100%
+    this.updateCreancesProgress(100);
+    
+    return result;
+  }
+  
   public getElement(): HTMLElement {
     return this.container;
   }

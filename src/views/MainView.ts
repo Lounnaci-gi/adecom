@@ -78,7 +78,7 @@ export class MainView {
       this.contentContainer.removeChild(this.currentView);
     }
     
-    // Créer et afficher la page portefeuille (anciennement clients)
+    // Créer et afficher la page portefeuille
     const clientsView = new ClientsView();
     this.currentView = clientsView.getElement();
     this.contentContainer.appendChild(this.currentView);
