@@ -5,6 +5,7 @@ export class Dashboard {
   private container: HTMLElement;
   private centresCount: number = 0;
   private abonnesCount: number = 0;
+  private creancesCount: number = 0;
   private isLoading: boolean = true;
 
   constructor() {
@@ -24,6 +25,9 @@ export class Dashboard {
       
       // Récupérer le nombre d'abonnés depuis ABONNE.DBF
       this.abonnesCount = await DbfService.getAbonnesCount();
+      
+      // Récupérer la somme des créances des abonnés depuis FACTURES.DBF
+      this.creancesCount = await DbfService.getAbonnesCreances();
       
       this.isLoading = false;
       this.updateCountsDisplay();
@@ -66,6 +70,7 @@ export class Dashboard {
   private updateCountsDisplay(): void {
     const centresCard = this.container.querySelector('.centres-stat-card');
     const abonnesCard = this.container.querySelector('.abonnes-stat-card');
+    const creancesCard = this.container.querySelector('.creances-stat-card');
     
     if (centresCard) {
       centresCard.innerHTML = `
@@ -80,6 +85,14 @@ export class Dashboard {
         <h3>Abonnés</h3>
         <p class="stat-value">${this.abonnesCount.toLocaleString()}</p>
         <p class="stat-change positive">Abonnés actifs</p>
+      `;
+    }
+    
+    if (creancesCard) {
+      creancesCard.innerHTML = `
+        <h3>Portefeuille Abonnés</h3>
+        <p class="stat-value">${this.creancesCount.toLocaleString('fr-FR', { style: 'currency', currency: 'DZD' })}</p>
+        <p class="stat-change positive">Créances non réglées</p>
       `;
     }
   }
@@ -106,6 +119,14 @@ export class Dashboard {
             ${this.isLoading ? '<span class="loading-spinner"></span>' : this.abonnesCount.toLocaleString()}
           </p>
           <p class="stat-change">${this.isLoading ? 'Chargement...' : 'Abonnés actifs'}</p>
+        </div>
+        
+        <div class="stat-card creances-stat-card">
+          <h3>Portefeuille Abonnés</h3>
+          <p class="stat-value">
+            ${this.isLoading ? '<span class="loading-spinner"></span>' : this.creancesCount.toLocaleString('fr-FR', { style: 'currency', currency: 'DZD' })}
+          </p>
+          <p class="stat-change">${this.isLoading ? 'Chargement...' : 'Créances non réglées'}</p>
         </div>
         
         <div class="stat-card">

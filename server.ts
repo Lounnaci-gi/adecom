@@ -904,6 +904,87 @@ app.post('/api/settings/save-centre', (req, res) => {
   }
 });
 
+// Route pour obtenir la somme des créances des abonnés depuis FACTURES.DBF
+// Compte uniquement les factures non réglées (PAIEMENT = 'T')
+app.get('/api/abonnes/creances', (req, res) => {
+  try {
+    const filePath = path.join(DBF_FOLDER_PATH, 'FACTURES.DBF');
+    
+    // Vérifier si le fichier existe
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ 
+        error: 'Fichier FACTURES.DBF non trouvé'
+      });
+    }
+    
+    // Vérifier les fichiers d'index disponibles
+    const indexFiles = checkIndexFiles(DBF_FOLDER_PATH);
+    const facturesIndexes = indexFiles.filter(file => 
+      file.toUpperCase().startsWith('FACTURES') && path.extname(file).toLowerCase() === '.ntx'
+    );
+    
+    if (facturesIndexes.length > 0) {
+      console.log(`Utilisation de l'index ${facturesIndexes[0]} pour accélérer la lecture de FACTURES.DBF`);
+    } else {
+      console.log('Aucun fichier d\'index trouvé pour FACTURES.DBF, lecture séquentielle');
+    }
+    
+    // Lire les informations d'en-tête
+    const headerBuffer = Buffer.alloc(32);
+    const fd = fs.openSync(filePath, 'r');
+    fs.readSync(fd, headerBuffer, 0, 32, 0);
+    
+    const header = {
+      numberOfRecords: headerBuffer.readUInt32LE(4),
+      headerLength: headerBuffer.readUInt16LE(8),
+      recordLength: headerBuffer.readUInt16LE(10)
+    };
+    
+    fs.closeSync(fd);
+    
+    // Calculer la somme des créances (montants non réglés)
+    let totalCreances = 0;
+    
+    for (let i = 0; i < header.numberOfRecords; i++) {
+      const recordOffset = header.headerLength + (i * header.recordLength);
+      
+      const recordBuffer = Buffer.alloc(header.recordLength + 10);
+      const fd = fs.openSync(filePath, 'r');
+      fs.readSync(fd, recordBuffer, 0, header.recordLength, recordOffset);
+      fs.closeSync(fd);
+      
+      // Vérifier si l'enregistrement est supprimé
+      const isDeleted = recordBuffer.readUInt8(0) === 0x2A;
+      if (!isDeleted) {
+        // Extraire le champ PAIEMENT (position 189, longueur 1 caractère)
+        const paiement = recordBuffer.subarray(189, 190).toString('utf-8').trim();
+        
+        // Vérifier si la facture n'est pas réglée (PAIEMENT = 'T')
+        if (paiement === 'T') {
+          // Extraire le champ MONTTC (position 53, longueur 10 caractères)
+          const monttcStr = recordBuffer.subarray(53, 63).toString('utf-8').trim();
+          const monttc = parseFloat(monttcStr.replace(',', '.'));
+          
+          if (!isNaN(monttc)) {
+            totalCreances += monttc;
+          }
+        }
+      }
+    }
+    
+    res.json({
+      totalCreances: parseFloat(totalCreances.toFixed(2)),
+      indexUsed: facturesIndexes.length > 0 ? facturesIndexes[0] : null
+    });
+  } catch (error) {
+    console.error('Erreur lors du calcul des créances:', error);
+    res.status(500).json({ 
+      error: 'Erreur serveur lors du calcul des créances',
+      message: (error as Error).message
+    });
+  }
+});
+
 // Démarrer le serveur
 app.listen(PORT, () => {
   console.log(`Serveur DBF démarré sur http://localhost:${PORT}`);

@@ -179,3 +179,19 @@ export async function saveCentreToEnv(centreCode: string) {
     throw error;
   }
 }
+
+/**
+ * Récupère la somme des créances des abonnés depuis FACTURES.DBF
+ */
+export async function getAbonnesCreances() {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/abonnes/creances`);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('Erreur lors de la récupération des créances des abonnés:', error);
+    throw error;
+  }
+}

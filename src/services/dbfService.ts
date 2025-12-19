@@ -1,5 +1,5 @@
 // dbfService.ts
-import { getDbfFiles, getCentresCount, getAbonnesCount, getAbonnesCountByType, getAbonnesCompteurArret, getAbonnesSansCompteur, updateDbfPath, getDbfPath, getCentresList, saveCentreToEnv } from '../api';
+import { getDbfFiles, getCentresCount, getAbonnesCount, getAbonnesCountByType, getAbonnesCompteurArret, getAbonnesSansCompteur, updateDbfPath, getDbfPath, getCentresList, saveCentreToEnv, getAbonnesCreances } from '../api';
 import { dbfConfig } from '../database/dbfConnection';
 
 /**
@@ -175,6 +175,20 @@ export class DbfService {
     } catch (error) {
       console.error('Erreur lors de l\'enregistrement du centre dans .env:', error);
       return false;
+    }
+  }
+  
+  /**
+   * Récupère la somme des créances des abonnés
+   */
+  static async getAbonnesCreances(): Promise<number> {
+    try {
+      const result = await getAbonnesCreances();
+      return result.totalCreances || 0;
+    } catch (error) {
+      console.error('Erreur lors de la récupération des créances des abonnés:', error);
+      // Retourner 0 en cas d'erreur
+      return 0;
     }
   }
 
