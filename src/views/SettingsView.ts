@@ -141,11 +141,9 @@ export class SettingsView {
     
     // Attacher l'événement pour la liste déroulante des centres (Paramètres)
     const centreSelection = this.container.querySelector('#centreSelection') as HTMLSelectElement;
-    console.log('Élément centreSelection trouvé:', centreSelection);
     if (centreSelection) {
       centreSelection.addEventListener('change', async (event) => {
         const selectedValue = (event.target as HTMLSelectElement).value;
-        console.log('Centre sélectionné (Paramètres):', selectedValue);
         if (selectedValue) {
           // Enregistrer le centre sélectionné dans le fichier .env
           try {
@@ -164,11 +162,9 @@ export class SettingsView {
     
     // Attacher l'événement pour la liste déroulante des centres (Connexion DBF)
     const centreDbfSelection = this.container.querySelector('#centreDbfSelection') as HTMLSelectElement;
-    console.log('Élément centreDbfSelection trouvé:', centreDbfSelection);
     if (centreDbfSelection) {
       centreDbfSelection.addEventListener('change', async (event) => {
         const selectedValue = (event.target as HTMLSelectElement).value;
-        console.log('Centre sélectionné (Connexion DBF):', selectedValue);
         if (selectedValue) {
           // Enregistrer le centre sélectionné dans le fichier .env
           try {
