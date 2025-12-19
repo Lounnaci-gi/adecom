@@ -4,6 +4,7 @@ import cors from 'cors';
 import fs from 'fs';
 import path from 'path';
 import dotenv from 'dotenv';
+import { DBFFile } from 'dbffile';
 
 dotenv.config();
 
@@ -906,7 +907,7 @@ app.post('/api/settings/save-centre', (req, res) => {
 
 // Route pour obtenir la somme des créances des abonnés depuis FACTURES.DBF
 // Compte uniquement les factures non réglées (PAIEMENT = 'T')
-app.get('/api/abonnes/creances', (req, res) => {
+app.get('/api/abonnes/creances', async (req, res) => {
   try {
     const filePath = path.join(DBF_FOLDER_PATH, 'FACTURES.DBF');
     
@@ -943,33 +944,47 @@ app.get('/api/abonnes/creances', (req, res) => {
     fs.closeSync(fd);
     
     // Calculer la somme des créances (montants non réglés)
+    // Selon la requête SQL: SELECT Sum(MONTTC) FROM FACTURES.DBF WHERE PAIEMENT = 'T'
     let totalCreances = 0;
     
-    for (let i = 0; i < header.numberOfRecords; i++) {
-      const recordOffset = header.headerLength + (i * header.recordLength);
+    try {
+      // Ouvrir le fichier DBF
+      const dbf = await DBFFile.open(filePath);
       
-      const recordBuffer = Buffer.alloc(header.recordLength + 10);
-      const fd = fs.openSync(filePath, 'r');
-      fs.readSync(fd, recordBuffer, 0, header.recordLength, recordOffset);
-      fs.closeSync(fd);
+      // Lire les enregistrements par lots pour éviter les problèmes de mémoire
+      const batchSize = 1000;
+      let offset = 0;
+      let hasMoreRecords = true;
       
-      // Vérifier si l'enregistrement est supprimé
-      const isDeleted = recordBuffer.readUInt8(0) === 0x2A;
-      if (!isDeleted) {
-        // Extraire le champ PAIEMENT (position 189, longueur 1 caractère)
-        const paiement = recordBuffer.subarray(189, 190).toString('utf-8').trim();
+      while (hasMoreRecords) {
+        // Lire un lot d'enregistrements
+        const records = await dbf.readRecords(batchSize, offset);
         
-        // Vérifier si la facture n'est pas réglée (PAIEMENT = 'T')
-        if (paiement === 'T') {
-          // Extraire le champ MONTTC (position 53, longueur 10 caractères)
-          const monttcStr = recordBuffer.subarray(53, 63).toString('utf-8').trim();
-          const monttc = parseFloat(monttcStr.replace(',', '.'));
-          
-          if (!isNaN(monttc)) {
-            totalCreances += monttc;
+        // Parcourir les enregistrements et additionner les montants
+        for (const record of records) {
+          // Vérifier si la facture n'est pas réglée (PAIEMENT = 'T')
+          if (record.PAIEMENT === 'T') {
+            // Ajouter le montant MONTTC
+            totalCreances += record.MONTTC || 0;
           }
         }
+        
+        // Mettre à jour l'offset pour le prochain lot
+        offset += records.length;
+        
+        // Vérifier s'il y a plus d'enregistrements
+        hasMoreRecords = records.length === batchSize;
+        
+        // Afficher la progression
+        if (offset % 10000 === 0) {
+          console.log(`Progression: ${offset} enregistrements traités`);
+        }
       }
+      
+      console.log(`Traitement terminé: ${offset} enregistrements traités au total`);
+    } catch (error) {
+      console.error('Erreur lors de la lecture du fichier DBF:', error);
+      throw error;
     }
     
     res.json({
