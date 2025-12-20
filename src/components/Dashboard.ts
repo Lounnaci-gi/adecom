@@ -15,13 +15,31 @@ export class Dashboard {
     this.loadCounts();
   }
 
-  private async loadCounts(): Promise<void> {
+  private async loadCounts(fromCache: boolean = true, forceRefresh: boolean = false): Promise<void> {
     try {
       this.isLoading = true;
       this.updateLoadingState();
       
+      // Vérifier si les données sont dans le sessionStorage
+      if (fromCache && !forceRefresh) {
+        const cachedData = sessionStorage.getItem('dashboardStats');
+        if (cachedData) {
+          const stats = JSON.parse(cachedData);
+          this.centresCount = stats.centresCount;
+          this.abonnesCount = stats.abonnesCount;
+          this.creancesCount = stats.creancesCount;
+          
+          this.updateCentresDisplay();
+          this.updateAbonnesDisplay();
+          this.updateCreancesDisplay();
+          
+          this.isLoading = false;
+          return;
+        }
+      }
+      
       // Effectuer les requêtes en parallèle
-      const centresPromise = DbfService.getCentresCount()
+      const centresPromise = DbfService.getCentresCount(forceRefresh)
         .then(count => {
           this.centresCount = count;
           this.updateCentresDisplay();
@@ -32,7 +50,7 @@ export class Dashboard {
           this.updateCentresDisplay();
         });
       
-      const abonnesPromise = DbfService.getAbonnesCount()
+      const abonnesPromise = DbfService.getAbonnesCount(forceRefresh)
         .then(count => {
           this.abonnesCount = count;
           this.updateAbonnesDisplay();
@@ -46,7 +64,7 @@ export class Dashboard {
       // Afficher la barre de progression pendant le chargement
       this.updateLoadingState();
       
-      const creancesPromise = this.loadCreancesWithProgress()
+      const creancesPromise = this.loadCreancesWithProgress(forceRefresh)
         .then(count => {
           this.creancesCount = count;
           this.updateCreancesDisplay();
@@ -59,6 +77,15 @@ export class Dashboard {
       
       // Attendre que toutes les requêtes soient terminées
       await Promise.all([centresPromise, abonnesPromise, creancesPromise]);
+      
+      // Sauvegarder les données dans le sessionStorage
+      const stats = {
+        centresCount: this.centresCount,
+        abonnesCount: this.abonnesCount,
+        creancesCount: this.creancesCount,
+        timestamp: Date.now()
+      };
+      sessionStorage.setItem('dashboardStats', JSON.stringify(stats));
       
       this.isLoading = false;
     } catch (error) {
@@ -238,9 +265,9 @@ export class Dashboard {
     `;
   }
 
-  private async loadCreancesWithProgress(): Promise<number> {
+  private async loadCreancesWithProgress(forceRefresh: boolean = false): Promise<number> {
     // Créer une promesse pour le chargement des données
-    const loadDataPromise = DbfService.getAbonnesCreances();
+    const loadDataPromise = DbfService.getAbonnesCreances(forceRefresh);
     
     // Simuler une progression plus réaliste basée sur le nombre total d'enregistrements
     // Le serveur traite environ 1.126.503 enregistrements
@@ -283,5 +310,13 @@ export class Dashboard {
   
   public getElement(): HTMLElement {
     return this.container;
+  }
+  
+  public refreshData(): void {
+    // Supprimer les données du cache
+    sessionStorage.removeItem('dashboardStats');
+    
+    // Recharger les données avec rafraîchissement forcé
+    this.loadCounts(false, true);
   }
 }

@@ -9,6 +9,8 @@ export class MainView {
   private navbar: Navbar;
   private contentContainer: HTMLElement;
   private currentView: HTMLElement | null = null;
+  private currentDashboard: any = null;
+  private currentStatistiqueAbonnesView: any = null;
 
   constructor() {
     this.navbar = new Navbar();
@@ -35,6 +37,11 @@ export class MainView {
     window.addEventListener('navigate', (e: any) => {
       const view = (e as CustomEvent).detail.view;
       this.navigateTo(view);
+    });
+    
+    // Écouter l'événement de rafraîchissement
+    window.addEventListener('refreshData', () => {
+      this.refreshCurrentView();
     });
   }
 
@@ -68,6 +75,7 @@ export class MainView {
     
     // Créer et afficher le dashboard
     const dashboard = new Dashboard();
+    this.currentDashboard = dashboard; // Stocker l'instance du dashboard
     this.currentView = dashboard.getElement();
     this.contentContainer.appendChild(this.currentView);
   }
@@ -92,8 +100,21 @@ export class MainView {
     
     // Créer et afficher la page statistique abonnés
     const statistiqueAbonnesView = new StatistiqueAbonnesView();
+    this.currentStatistiqueAbonnesView = statistiqueAbonnesView;
     this.currentView = statistiqueAbonnesView.getElement();
     this.contentContainer.appendChild(this.currentView);
+  }
+  
+  private refreshCurrentView(): void {
+    // Rafraîchir la vue actuelle si c'est le dashboard
+    if (this.currentDashboard) {
+      this.currentDashboard.refreshData();
+    }
+    
+    // Rafraîchir la vue statistique abonnés si elle est active
+    if (this.currentStatistiqueAbonnesView) {
+      this.currentStatistiqueAbonnesView.loadAbonnesData(true);
+    }
   }
 
   private showSettings(): void {

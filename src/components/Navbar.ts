@@ -33,6 +33,9 @@ export class Navbar {
             <a href="#" class="navbar-link" data-view="settings">Paramètres</a>
           </li>
           <li class="navbar-item theme-toggle">
+            <button id="refresh-btn" class="refresh-btn" aria-label="Refresh data">
+              <span class="refresh-icon">🔄</span>
+            </button>
             <button id="theme-toggle" class="theme-toggle-btn" aria-label="Toggle theme">
               <span class="theme-icon">🌙</span>
             </button>
@@ -74,6 +77,14 @@ export class Navbar {
     navbarToggle?.addEventListener('click', () => {
       navbarMenu?.classList.toggle('active');
       navbarToggle?.classList.toggle('active');
+    });
+    
+    // Gestion du bouton de rafraîchissement
+    const refreshBtn = this.container.querySelector('#refresh-btn');
+    refreshBtn?.addEventListener('click', () => {
+      // Dispatcher un événement personnalisé pour rafraîchir les données
+      const event = new CustomEvent('refreshData');
+      window.dispatchEvent(event);
     });
   }
   

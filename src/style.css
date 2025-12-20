@@ -680,6 +680,27 @@ tr:hover {
   transition: background-color 0.15s ease;
 }
 
+.refresh-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-color);
+  cursor: pointer;
+  font-size: 0.9rem;
+  padding: 0.25rem;
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.15s ease;
+  margin-right: 0.5rem;
+}
+
+.refresh-btn:hover {
+  background-color: rgba(100, 108, 255, 0.1);
+}
+
 .theme-toggle-btn:hover {
   background-color: rgba(100, 108, 255, 0.1);
 }

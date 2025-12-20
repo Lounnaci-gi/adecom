@@ -12,6 +12,11 @@ dotenv.config();
 // Configuration du dossier DBF
 let DBF_FOLDER_PATH = process.env.DBF_FOLDER_PATH || process.env.VITE_DBF_FOLDER_PATH || 'D:/epeor';
 
+// Cache pour les créances
+// Augmenter la durée de vie du cache à 30 minutes pour éviter les requêtes trop fréquentes
+let creancesCache: { totalCreances: number; timestamp: number } | null = null;
+const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes
+
 // Initialisation du service SQL
 const dbfSqlService = new DbfSqlService();
 
@@ -970,6 +975,24 @@ app.post('/api/settings/save-centre', (req, res) => {
 // Utilise maintenant le service SQL pour des requêtes plus efficaces
 app.get('/api/abonnes/creances', async (req, res) => {
   try {
+    // Vérifier si le rafraîchissement est forcé
+    const forceRefresh = req.query.refresh === 'true';
+    
+    // Vérifier d'abord si les données sont en cache
+    if (!forceRefresh && creancesCache) {
+      // Vérifier si les données ne sont pas trop anciennes
+      if (Date.now() - creancesCache.timestamp < CACHE_DURATION) {
+        console.log('Retour des créances depuis le cache');
+        return res.json({
+          totalCreances: creancesCache.totalCreances,
+          executionTime: 0,
+          rowCount: 1,
+          fromCache: true,
+          cacheAge: Math.floor((Date.now() - creancesCache.timestamp) / 1000) // âge du cache en secondes
+        });
+      }
+    }
+    
     // Mesurer le temps d'exécution
     const startTime = Date.now();
     
@@ -988,10 +1011,17 @@ app.get('/api/abonnes/creances', async (req, res) => {
     
     console.log(`Requête SQL exécutée en ${executionTime} ms, créances totales: ${totalCreances}`);
     
+    // Mettre en cache les données
+    creancesCache = {
+      totalCreances: parseFloat(totalCreances.toFixed(2)),
+      timestamp: Date.now()
+    };
+    
     res.json({
       totalCreances: parseFloat(totalCreances.toFixed(2)),
       executionTime: executionTime,
-      rowCount: result.count
+      rowCount: result.count,
+      fromCache: forceRefresh ? false : (creancesCache ? true : false)
     });
   } catch (error) {
     console.error('Erreur lors du calcul des créances:', error);

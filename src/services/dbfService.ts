@@ -24,12 +24,34 @@ export class DbfService {
    * Récupère le nombre réel de centres depuis TABCODE.DBF
    * Les centres sont identifiés par des codes commençant par 'S' (exemple: S02)
    * Utilise les fichiers d'index NTX si disponibles pour accélérer les requêtes
+   * @param forceRefresh Force le rafraîchissement des données
    */
-  static async getCentresCount(): Promise<number> {
+  static async getCentresCount(forceRefresh: boolean = false): Promise<number> {
     try {
+      // Vérifier le cache
+      if (!forceRefresh) {
+        const cachedData = sessionStorage.getItem('centresCount');
+        if (cachedData) {
+          const parsedData = JSON.parse(cachedData);
+          // Vérifier si les données ne sont pas trop anciennes (30 minutes)
+          if (Date.now() - parsedData.timestamp < 30 * 60 * 1000) {
+            return parsedData.count;
+          }
+        }
+      }
+      
       console.log(`Utilisation de l'index ${dbfConfig.indexFile || 'aucun'} pour accélérer les requêtes TABCODE.DBF`);
       const result = await getCentresCount();
-      return result.count || 0;
+      const count = result.count || 0;
+      
+      // Mettre en cache
+      const cacheData = {
+        count: count,
+        timestamp: Date.now()
+      };
+      sessionStorage.setItem('centresCount', JSON.stringify(cacheData));
+      
+      return count;
     } catch (error) {
       console.error('Erreur lors de la récupération du nombre de centres:', error);
       // Retourner 0 en cas d'erreur
@@ -40,12 +62,34 @@ export class DbfService {
   /**
    * Récupère le nombre d'abonnés depuis ABONNE.DBF
    * Utilise les fichiers d'index NTX si disponibles pour accélérer les requêtes
+   * @param forceRefresh Force le rafraîchissement des données
    */
-  static async getAbonnesCount(): Promise<number> {
+  static async getAbonnesCount(forceRefresh: boolean = false): Promise<number> {
     try {
+      // Vérifier le cache
+      if (!forceRefresh) {
+        const cachedData = sessionStorage.getItem('abonnesCount');
+        if (cachedData) {
+          const parsedData = JSON.parse(cachedData);
+          // Vérifier si les données ne sont pas trop anciennes (30 minutes)
+          if (Date.now() - parsedData.timestamp < 30 * 60 * 1000) {
+            return parsedData.count;
+          }
+        }
+      }
+      
       console.log(`Utilisation de l'index ${dbfConfig.indexFile || 'aucun'} pour accélérer les requêtes ABONNE.DBF`);
       const result = await getAbonnesCount();
-      return result.count || 0;
+      const count = result.count || 0;
+      
+      // Mettre en cache
+      const cacheData = {
+        count: count,
+        timestamp: Date.now()
+      };
+      sessionStorage.setItem('abonnesCount', JSON.stringify(cacheData));
+      
+      return count;
     } catch (error) {
       console.error('Erreur lors de la récupération du nombre d\'abonnés:', error);
       // Retourner 0 en cas d'erreur
@@ -56,11 +100,33 @@ export class DbfService {
   /**
    * Récupère le nombre d'abonnés par type depuis ABONNE.DBF avec jointure TABCODE.DBF
    * Utilise les fichiers d'index NTX si disponibles pour accélérer les requêtes
+   * @param forceRefresh Force le rafraîchissement des données
    */
-  static async getAbonnesCountByType() {
+  static async getAbonnesCountByType(forceRefresh: boolean = false) {
     try {
+      // Vérifier le cache
+      if (!forceRefresh) {
+        const cachedData = sessionStorage.getItem('abonnesCountByType');
+        if (cachedData) {
+          const parsedData = JSON.parse(cachedData);
+          // Vérifier si les données ne sont pas trop anciennes (30 minutes)
+          if (Date.now() - parsedData.timestamp < 30 * 60 * 1000) {
+            return parsedData.data;
+          }
+        }
+      }
+      
       console.log(`Utilisation de l'index ${dbfConfig.indexFile || 'aucun'} pour accélérer les requêtes ABONNE.DBF avec jointure TABCODE.DBF`);
-      return await getAbonnesCountByType();
+      const result = await getAbonnesCountByType();
+      
+      // Mettre en cache
+      const cacheData = {
+        data: result,
+        timestamp: Date.now()
+      };
+      sessionStorage.setItem('abonnesCountByType', JSON.stringify(cacheData));
+      
+      return result;
     } catch (error) {
       console.error('Erreur lors de la récupération du nombre d\'abonnés par type:', error);
       throw error;
@@ -70,12 +136,34 @@ export class DbfService {
   /**
    * Récupère le nombre d'abonnés avec compteur à l'arrêt (ETATCPT = '20') depuis ABONMENT.DBF
    * Utilise les fichiers d'index NTX si disponibles pour accélérer les requêtes
+   * @param forceRefresh Force le rafraîchissement des données
    */
-  static async getAbonnesCompteurArret(): Promise<number> {
+  static async getAbonnesCompteurArret(forceRefresh: boolean = false): Promise<number> {
     try {
+      // Vérifier le cache
+      if (!forceRefresh) {
+        const cachedData = sessionStorage.getItem('abonnesCompteurArret');
+        if (cachedData) {
+          const parsedData = JSON.parse(cachedData);
+          // Vérifier si les données ne sont pas trop anciennes (30 minutes)
+          if (Date.now() - parsedData.timestamp < 30 * 60 * 1000) {
+            return parsedData.count;
+          }
+        }
+      }
+      
       console.log(`Utilisation de l'index ${dbfConfig.indexFile || 'aucun'} pour accélérer les requêtes ABONMENT.DBF (compteur à l'arrêt)`);
       const result = await getAbonnesCompteurArret();
-      return result.count || 0;
+      const count = result.count || 0;
+      
+      // Mettre en cache
+      const cacheData = {
+        count: count,
+        timestamp: Date.now()
+      };
+      sessionStorage.setItem('abonnesCompteurArret', JSON.stringify(cacheData));
+      
+      return count;
     } catch (error) {
       console.error('Erreur lors de la récupération du nombre d\'abonnés avec compteur à l\'arrêt:', error);
       // Retourner 0 en cas d'erreur
@@ -86,12 +174,34 @@ export class DbfService {
   /**
    * Récupère le nombre d'abonnés sans compteur (ETATCPT = '30') depuis ABONMENT.DBF
    * Utilise les fichiers d'index NTX si disponibles pour accélérer les requêtes
+   * @param forceRefresh Force le rafraîchissement des données
    */
-  static async getAbonnesSansCompteur(): Promise<number> {
+  static async getAbonnesSansCompteur(forceRefresh: boolean = false): Promise<number> {
     try {
+      // Vérifier le cache
+      if (!forceRefresh) {
+        const cachedData = sessionStorage.getItem('abonnesSansCompteur');
+        if (cachedData) {
+          const parsedData = JSON.parse(cachedData);
+          // Vérifier si les données ne sont pas trop anciennes (30 minutes)
+          if (Date.now() - parsedData.timestamp < 30 * 60 * 1000) {
+            return parsedData.count;
+          }
+        }
+      }
+      
       console.log(`Utilisation de l'index ${dbfConfig.indexFile || 'aucun'} pour accélérer les requêtes ABONMENT.DBF (sans compteur)`);
       const result = await getAbonnesSansCompteur();
-      return result.count || 0;
+      const count = result.count || 0;
+      
+      // Mettre en cache
+      const cacheData = {
+        count: count,
+        timestamp: Date.now()
+      };
+      sessionStorage.setItem('abonnesSansCompteur', JSON.stringify(cacheData));
+      
+      return count;
     } catch (error) {
       console.error('Erreur lors de la récupération du nombre d\'abonnés sans compteur:', error);
       // Retourner 0 en cas d'erreur
@@ -157,11 +267,12 @@ export class DbfService {
   /**
    * Récupère la somme des créances des abonnés
    * Utilise les fichiers d'index FAC*.NTX si disponibles pour accélérer les requêtes
+   * @param forceRefresh Force le rafraîchissement des données
    */
-  static async getAbonnesCreances(): Promise<number> {
+  static async getAbonnesCreances(forceRefresh: boolean = false): Promise<number> {
     try {
       console.log('Utilisation des index FAC*.NTX pour accélérer les requêtes FACTURES.DBF (créances)');
-      const result = await getAbonnesCreances();
+      const result = await getAbonnesCreances(forceRefresh);
       console.log(`Index utilisés: ${result.indexUsed || 'aucun'}, Nombre d'index: ${result.indexCount || 0}`);
       return result.totalCreances || 0;
     } catch (error) {

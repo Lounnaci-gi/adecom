@@ -29,13 +29,13 @@ export class StatistiqueAbonnesView {
     this.loadAbonnesData();
   }
 
-  private async loadAbonnesData(): Promise<void> {
+  private async loadAbonnesData(forceRefresh: boolean = false): Promise<void> {
     try {
       this.isLoading = true;
       this.updateLoadingState();
       
       // Récupérer les abonnés par type
-      const result = await DbfService.getAbonnesCountByType();
+      const result = await DbfService.getAbonnesCountByType(forceRefresh);
       this.totalCount = result.totalCount;
       this.totalResilieCount = result.totalResilieCount || 0;
       this.sansCompteurCount = result.totalSansCompteurCount || 0;
@@ -43,10 +43,10 @@ export class StatistiqueAbonnesView {
       this.abonnesTypes = result.types;
       
       // Récupérer le nombre d'abonnés avec compteur à l'arrêt
-      this.compteurArretCount = await DbfService.getAbonnesCompteurArret();
+      this.compteurArretCount = await DbfService.getAbonnesCompteurArret(forceRefresh);
       
       // Récupérer le nombre d'abonnés sans compteur
-      this.sansCompteurCount = await DbfService.getAbonnesSansCompteur();
+      this.sansCompteurCount = await DbfService.getAbonnesSansCompteur(forceRefresh);
       
       this.isLoading = false;
       this.updateDisplay();

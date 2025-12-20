@@ -180,10 +180,15 @@ export async function saveCentreToEnv(centreCode: string) {
 
 /**
  * Récupère la somme des créances des abonnés depuis FACTURES.DBF
+ * @param forceRefresh Force le rafraîchissement des données
  */
-export async function getAbonnesCreances() {
+export async function getAbonnesCreances(forceRefresh: boolean = false) {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/abonnes/creances`);
+    const url = forceRefresh 
+      ? `${API_BASE_URL}/api/abonnes/creances?refresh=true`
+      : `${API_BASE_URL}/api/abonnes/creances`;
+      
+    const response = await fetch(url);
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
