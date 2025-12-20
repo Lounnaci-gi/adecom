@@ -156,10 +156,13 @@ export class DbfService {
   
   /**
    * Récupère la somme des créances des abonnés
+   * Utilise les fichiers d'index FAC*.NTX si disponibles pour accélérer les requêtes
    */
   static async getAbonnesCreances(): Promise<number> {
     try {
+      console.log('Utilisation des index FAC*.NTX pour accélérer les requêtes FACTURES.DBF (créances)');
       const result = await getAbonnesCreances();
+      console.log(`Index utilisés: ${result.indexUsed || 'aucun'}, Nombre d'index: ${result.indexCount || 0}`);
       return result.totalCreances || 0;
     } catch (error) {
       console.error('Erreur lors de la récupération des créances des abonnés:', error);

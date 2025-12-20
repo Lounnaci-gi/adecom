@@ -244,27 +244,18 @@ export class Dashboard {
     
     // Simuler une progression plus réaliste basée sur le nombre total d'enregistrements
     // Le serveur traite environ 1.126.503 enregistrements
+    // Nouvelle approche avec des étapes plus espacées pour refléter l'optimisation
     const steps = [
-      { records: 10000, progress: 1 },
-      { records: 20000, progress: 2 },
-      { records: 30000, progress: 3 },
-      { records: 40000, progress: 4 },
       { records: 50000, progress: 5 },
-      { records: 60000, progress: 6 },
-      { records: 70000, progress: 7 },
-      { records: 80000, progress: 8 },
-      { records: 90000, progress: 9 },
       { records: 100000, progress: 10 },
-      { records: 200000, progress: 18 },
-      { records: 300000, progress: 27 },
-      { records: 400000, progress: 36 },
-      { records: 500000, progress: 44 },
-      { records: 600000, progress: 53 },
-      { records: 700000, progress: 62 },
-      { records: 800000, progress: 71 },
-      { records: 900000, progress: 80 },
-      { records: 1000000, progress: 89 },
-      { records: 1100000, progress: 98 },
+      { records: 200000, progress: 20 },
+      { records: 300000, progress: 30 },
+      { records: 400000, progress: 40 },
+      { records: 500000, progress: 50 },
+      { records: 600000, progress: 60 },
+      { records: 700000, progress: 70 },
+      { records: 800000, progress: 80 },
+      { records: 900000, progress: 90 },
       { records: 1126503, progress: 100 }
     ];
     
@@ -276,7 +267,7 @@ export class Dashboard {
         this.updateCreancesProgress(step.progress);
         stepIndex++;
       }
-    }, 300);
+    }, 500); // Intervalle légèrement augmenté pour refléter les meilleures performances
     
     // Attendre que les données soient chargées
     const result = await loadDataPromise;

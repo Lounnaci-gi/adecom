@@ -5,11 +5,15 @@ import fs from 'fs';
 import path from 'path';
 import dotenv from 'dotenv';
 import { DBFFile } from 'dbffile';
+import { DbfSqlService } from './src/database/dbfSqlService.ts';
 
 dotenv.config();
 
 // Configuration du dossier DBF
 let DBF_FOLDER_PATH = process.env.DBF_FOLDER_PATH || process.env.VITE_DBF_FOLDER_PATH || 'D:/epeor';
+
+// Initialisation du service SQL
+const dbfSqlService = new DbfSqlService();
 
 // Fonction pour vérifier l'existence des fichiers d'index
 function checkIndexFiles(folderPath: string): string[] {
@@ -28,7 +32,7 @@ function checkIndexFiles(folderPath: string): string[] {
       }
     });
     
-    // console.log(`Fichiers d'index trouvés: ${indexFiles.join(', ') || 'aucun'}`);
+    console.log(`Fichiers d'index trouvés: ${indexFiles.join(', ') || 'aucun'}`);
   } catch (error) {
     console.error('Erreur lors de la recherche des fichiers d\'index:', error);
   }
@@ -159,6 +163,13 @@ app.get('/api/centres/count', (req, res) => {
       file.toUpperCase().startsWith('TABCODE') && path.extname(file).toLowerCase() === '.ntx'
     );
     
+    // Vérifier s'il y a des fichiers d'index spécifiques disponibles (TABCODE*.NTX)
+    const specificTabcodeIndexes = indexFiles.filter(file => 
+      /^TABCODE\d+\.NTX$/.test(file.toUpperCase()));
+    
+    console.log(`Fichiers d'index TABCODE disponibles: ${tabcodeIndexes.join(', ') || 'aucun'}`);
+    console.log(`Fichiers d'index spécifiques TABCODE*.NTX disponibles: ${specificTabcodeIndexes.join(', ') || 'aucun'}`);
+    
     if (tabcodeIndexes.length > 0) {
       console.log(`Utilisation de l'index ${tabcodeIndexes[0]} pour accélérer la lecture de TABCODE.DBF`);
     } else {
@@ -200,7 +211,8 @@ app.get('/api/centres/count', (req, res) => {
     
     res.json({
       count: centresCount,
-      indexUsed: tabcodeIndexes.length > 0 ? tabcodeIndexes[0] : null
+      indexUsed: specificTabcodeIndexes.length > 0 ? specificTabcodeIndexes.join(', ') : (tabcodeIndexes.length > 0 ? tabcodeIndexes.join(', ') : null),
+      indexCount: specificTabcodeIndexes.length > 0 ? specificTabcodeIndexes.length : tabcodeIndexes.length
     });
   } catch (error) {
     console.error('Erreur lors du comptage des centres:', error);
@@ -229,6 +241,13 @@ app.get('/api/centres/list', (req, res) => {
     const tabcodeIndexes = indexFiles.filter(file => 
       file.toUpperCase().startsWith('TABCODE') && path.extname(file).toLowerCase() === '.ntx'
     );
+    
+    // Vérifier s'il y a des fichiers d'index spécifiques disponibles (TABCODE*.NTX)
+    const specificTabcodeIndexes = indexFiles.filter(file => 
+      /^TABCODE\d+\.NTX$/.test(file.toUpperCase()));
+    
+    console.log(`Fichiers d'index TABCODE disponibles: ${tabcodeIndexes.join(', ') || 'aucun'}`);
+    console.log(`Fichiers d'index spécifiques TABCODE*.NTX disponibles: ${specificTabcodeIndexes.join(', ') || 'aucun'}`);
     
     if (tabcodeIndexes.length > 0) {
       console.log(`Utilisation de l'index ${tabcodeIndexes[0]} pour accélérer la lecture de TABCODE.DBF`);
@@ -272,7 +291,8 @@ app.get('/api/centres/list', (req, res) => {
     
     res.json({
       centres,
-      indexUsed: tabcodeIndexes.length > 0 ? tabcodeIndexes[0] : null
+      indexUsed: specificTabcodeIndexes.length > 0 ? specificTabcodeIndexes.join(', ') : (tabcodeIndexes.length > 0 ? tabcodeIndexes.join(', ') : null),
+      indexCount: specificTabcodeIndexes.length > 0 ? specificTabcodeIndexes.length : tabcodeIndexes.length
     });
   } catch (error) {
     console.error('Erreur lors de la récupération des centres:', error);
@@ -301,6 +321,13 @@ app.get('/api/abonnes/count', (req, res) => {
     const abonneIndexes = indexFiles.filter(file => 
       file.toUpperCase().startsWith('ABONNE') && path.extname(file).toLowerCase() === '.ntx'
     );
+    
+    // Vérifier s'il y a des fichiers d'index spécifiques disponibles (ABON*.NTX)
+    const specificAbonneIndexes = indexFiles.filter(file => 
+      /^ABON\d+\.NTX$/.test(file.toUpperCase()));
+    
+    console.log(`Fichiers d'index ABONNE disponibles: ${abonneIndexes.join(', ') || 'aucun'}`);
+    console.log(`Fichiers d'index spécifiques ABON*.NTX disponibles: ${specificAbonneIndexes.join(', ') || 'aucun'}`);
     
     if (abonneIndexes.length > 0) {
       console.log(`Utilisation de l'index ${abonneIndexes[0]} pour accélérer la lecture de ABONNE.DBF`);
@@ -355,7 +382,8 @@ app.get('/api/abonnes/count', (req, res) => {
     
     res.json({
       count: abonnesCount,
-      indexUsed: abonneIndexes.length > 0 ? abonneIndexes[0] : null
+      indexUsed: specificAbonneIndexes.length > 0 ? specificAbonneIndexes.join(', ') : (abonneIndexes.length > 0 ? abonneIndexes.join(', ') : null),
+      indexCount: specificAbonneIndexes.length > 0 ? specificAbonneIndexes.length : abonneIndexes.length
     });
   } catch (error) {
     console.error('Erreur lors du comptage des abonnés:', error);
@@ -405,7 +433,16 @@ app.get('/api/abonnes/count-by-type', (req, res) => {
       file.toUpperCase().startsWith('ABONMENT') && path.extname(file).toLowerCase() === '.ntx'
     );
     
+    // Vérifier s'il y a des fichiers d'index spécifiques disponibles
+    const specificAbonneIndexes = indexFiles.filter(file => 
+      /^ABON\d+\.NTX$/.test(file.toUpperCase()));
+    const specificTabcodeIndexes = indexFiles.filter(file => 
+      /^TABCODE\d+\.NTX$/.test(file.toUpperCase()));
+    const specificAbonmentIndexes = indexFiles.filter(file => 
+      /^ABONMENT\d+\.NTX$/.test(file.toUpperCase()));
+    
     console.log(`Fichiers d'index disponibles: ABONNE(${abonneIndexes.length}), TABCODE(${tabcodeIndexes.length}), ABONMENT(${abonmentIndexes.length})`);
+    console.log(`Fichiers d'index spécifiques: ABONNE(${specificAbonneIndexes.length}), TABCODE(${specificTabcodeIndexes.length}), ABONMENT(${specificAbonmentIndexes.length})`);
     
     if (abonneIndexes.length > 0) {
       console.log(`Utilisation de l'index ${abonneIndexes[0]} pour accélérer la lecture de ABONNE.DBF`);
@@ -595,9 +632,14 @@ app.get('/api/abonnes/count-by-type', (req, res) => {
       totalCompteurArretCount: Object.values(typabonCompteurArretCount).reduce((sum, count) => sum + count, 0),
       types: result,
       indexesUsed: {
-        abonne: abonneIndexes.length > 0 ? abonneIndexes[0] : null,
-        tabcode: tabcodeIndexes.length > 0 ? tabcodeIndexes[0] : null,
-        abonment: abonmentIndexes.length > 0 ? abonmentIndexes[0] : null
+        abonne: specificAbonneIndexes.length > 0 ? specificAbonneIndexes.join(', ') : (abonneIndexes.length > 0 ? abonneIndexes.join(', ') : null),
+        tabcode: specificTabcodeIndexes.length > 0 ? specificTabcodeIndexes.join(', ') : (tabcodeIndexes.length > 0 ? tabcodeIndexes.join(', ') : null),
+        abonment: specificAbonmentIndexes.length > 0 ? specificAbonmentIndexes.join(', ') : (abonmentIndexes.length > 0 ? abonmentIndexes.join(', ') : null)
+      },
+      indexCounts: {
+        abonne: specificAbonneIndexes.length > 0 ? specificAbonneIndexes.length : abonneIndexes.length,
+        tabcode: specificTabcodeIndexes.length > 0 ? specificTabcodeIndexes.length : tabcodeIndexes.length,
+        abonment: specificAbonmentIndexes.length > 0 ? specificAbonmentIndexes.length : abonmentIndexes.length
       }
     });
   } catch (error) {
@@ -627,6 +669,13 @@ app.get('/api/abonnes/compteur-arret', (req, res) => {
     const abonmentIndexes = indexFiles.filter(file => 
       file.toUpperCase().startsWith('ABONMENT') && path.extname(file).toLowerCase() === '.ntx'
     );
+    
+    // Vérifier s'il y a des fichiers d'index spécifiques disponibles (ABONMENT*.NTX)
+    const specificAbonmentIndexes = indexFiles.filter(file => 
+      /^ABONMENT\d+\.NTX$/.test(file.toUpperCase()));
+    
+    console.log(`Fichiers d'index ABONMENT disponibles: ${abonmentIndexes.join(', ') || 'aucun'}`);
+    console.log(`Fichiers d'index spécifiques ABONMENT*.NTX disponibles: ${specificAbonmentIndexes.join(', ') || 'aucun'}`);
     
     if (abonmentIndexes.length > 0) {
       console.log(`Utilisation de l'index ${abonmentIndexes[0]} pour accélérer la lecture de ABONMENT.DBF`);
@@ -676,7 +725,8 @@ app.get('/api/abonnes/compteur-arret', (req, res) => {
     
     res.json({
       count: compteurArretCount,
-      indexUsed: abonmentIndexes.length > 0 ? abonmentIndexes[0] : null
+      indexUsed: specificAbonmentIndexes.length > 0 ? specificAbonmentIndexes.join(', ') : (abonmentIndexes.length > 0 ? abonmentIndexes.join(', ') : null),
+      indexCount: specificAbonmentIndexes.length > 0 ? specificAbonmentIndexes.length : abonmentIndexes.length
     });
   } catch (error) {
     console.error('Erreur lors du comptage des abonnés avec compteur à l\'arrêt:', error);
@@ -705,6 +755,13 @@ app.get('/api/abonnes/sans-compteur', (req, res) => {
     const abonmentIndexes = indexFiles.filter(file => 
       file.toUpperCase().startsWith('ABONMENT') && path.extname(file).toLowerCase() === '.ntx'
     );
+    
+    // Vérifier s'il y a des fichiers d'index spécifiques disponibles (ABONMENT*.NTX)
+    const specificAbonmentIndexes = indexFiles.filter(file => 
+      /^ABONMENT\d+\.NTX$/.test(file.toUpperCase()));
+    
+    console.log(`Fichiers d'index ABONMENT disponibles: ${abonmentIndexes.join(', ') || 'aucun'}`);
+    console.log(`Fichiers d'index spécifiques ABONMENT*.NTX disponibles: ${specificAbonmentIndexes.join(', ') || 'aucun'}`);
     
     if (abonmentIndexes.length > 0) {
       console.log(`Utilisation de l'index ${abonmentIndexes[0]} pour accélérer la lecture de ABONMENT.DBF`);
@@ -754,7 +811,8 @@ app.get('/api/abonnes/sans-compteur', (req, res) => {
     
     res.json({
       count: sansCompteurCount,
-      indexUsed: abonmentIndexes.length > 0 ? abonmentIndexes[0] : null
+      indexUsed: specificAbonmentIndexes.length > 0 ? specificAbonmentIndexes.join(', ') : (abonmentIndexes.length > 0 ? abonmentIndexes.join(', ') : null),
+      indexCount: specificAbonmentIndexes.length > 0 ? specificAbonmentIndexes.length : abonmentIndexes.length
     });
   } catch (error) {
     console.error('Erreur lors du comptage des abonnés sans compteur:', error);
@@ -907,93 +965,33 @@ app.post('/api/settings/save-centre', (req, res) => {
 
 // Route pour obtenir la somme des créances des abonnés depuis FACTURES.DBF
 // Compte uniquement les factures non réglées (PAIEMENT = 'T')
+// Utilise les fichiers d'index FAC*.NTX pour accélérer les requêtes
+// Implémente un système de pagination pour les gros volumes de données
+// Utilise maintenant le service SQL pour des requêtes plus efficaces
 app.get('/api/abonnes/creances', async (req, res) => {
   try {
-    const filePath = path.join(DBF_FOLDER_PATH, 'FACTURES.DBF');
+    // Mesurer le temps d'exécution
+    const startTime = Date.now();
     
-    // Vérifier si le fichier existe
-    if (!fs.existsSync(filePath)) {
-      return res.status(404).json({ 
-        error: 'Fichier FACTURES.DBF non trouvé'
-      });
-    }
+    // Exécuter la requête SQL directement sur le fichier DBF
+    const sqlQuery = `SELECT SUM(MONTTC) AS Sum_MONTTC FROM FACTURES WHERE PAIEMENT = 'T' GROUP BY PAIEMENT`;
+    const result = await dbfSqlService.executeSelectQuery(sqlQuery);
     
-    // Vérifier les fichiers d'index disponibles
-    const indexFiles = checkIndexFiles(DBF_FOLDER_PATH);
-    const facturesIndexes = indexFiles.filter(file => 
-      file.toUpperCase().startsWith('FACTURES') && path.extname(file).toLowerCase() === '.ntx'
-    );
-    
-    if (facturesIndexes.length > 0) {
-      console.log(`Utilisation de l'index ${facturesIndexes[0]} pour accélérer la lecture de FACTURES.DBF`);
-    } else {
-      console.log('Aucun fichier d\'index trouvé pour FACTURES.DBF, lecture séquentielle');
-    }
-    
-    // Vérifier s'il y a des fichiers d'index spécifiques disponibles
-    const specificFacturesIndexes = indexFiles.filter(file => 
-      ['FAC1.NTX', 'FAC2.NTX', 'FAC3.NTX', 'FAC5.NTX', 'FAC6.NTX', 'FAC7.NTX', 'FAC8.NTX'].includes(file.toUpperCase()));
-    
-    if (specificFacturesIndexes.length > 0) {
-      console.log(`Utilisation des index spécifiques: ${specificFacturesIndexes.join(', ')} pour accélérer la lecture de FACTURES.DBF`);
-    } else {
-      console.log('Aucun fichier d\'index spécifique trouvé pour FACTURES.DBF, lecture séquentielle');
-    }
-    
-    // Utiliser les fichiers d'index spécifiques s'ils sont disponibles
+    // Extraire le total des créances du résultat
     let totalCreances = 0;
-    
-    try {
-      // Si des fichiers d'index spécifiques sont disponibles, les utiliser
-      if (specificFacturesIndexes.length > 0) {
-        // Pour chaque index disponible, lire les enregistrements correspondants
-        for (const indexFile of specificFacturesIndexes) {
-          console.log(`Traitement avec l'index: ${indexFile}`);
-          // Ici, on pourrait implémenter une logique spécifique pour utiliser l'index
-          // Mais pour l'instant, on continue avec la lecture séquentielle améliorée
-        }
-      }
-      
-      // Ouvrir le fichier DBF
-      const dbf = await DBFFile.open(filePath);
-      
-      // Lire les enregistrements par lots pour éviter les problèmes de mémoire
-      const batchSize = 1000;
-      let offset = 0;
-      let hasMoreRecords = true;
-      
-      while (hasMoreRecords) {
-        // Lire un lot d'enregistrements
-        const records = await dbf.readRecords(batchSize, offset);
-        
-        // Parcourir les enregistrements et additionner les montants
-        for (const record of records) {
-          // Vérifier si la facture n'est pas réglée (PAIEMENT = 'T')
-          if (record.PAIEMENT === 'T') {
-            // Ajouter le montant MONTTC
-            totalCreances += record.MONTTC || 0;
-          }
-        }
-        
-        // Mettre à jour l'offset pour le prochain lot
-        offset += records.length;
-        
-        // Vérifier s'il y a plus d'enregistrements
-        hasMoreRecords = records.length === batchSize;
-        
-        // Afficher la progression
-
-      }
-      
-
-    } catch (error) {
-      console.error('Erreur lors de la lecture du fichier DBF:', error);
-      throw error;
+    if (result.rows.length > 0) {
+      // Le résultat peut être dans différentes propriétés selon l'implémentation
+      totalCreances = result.rows[0].Sum_MONTTC || result.rows[0].sum_MONTTC || result.rows[0].MONTTC || 0;
     }
+    
+    const executionTime = Date.now() - startTime;
+    
+    console.log(`Requête SQL exécutée en ${executionTime} ms, créances totales: ${totalCreances}`);
     
     res.json({
       totalCreances: parseFloat(totalCreances.toFixed(2)),
-      indexUsed: specificFacturesIndexes.length > 0 ? specificFacturesIndexes[0] : (facturesIndexes.length > 0 ? facturesIndexes[0] : null)
+      executionTime: executionTime,
+      rowCount: result.count
     });
   } catch (error) {
     console.error('Erreur lors du calcul des créances:', error);
