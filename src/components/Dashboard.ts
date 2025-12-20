@@ -12,37 +12,55 @@ export class Dashboard {
     this.container = document.createElement('div');
     this.container.className = 'dashboard';
     this.render();
+    // Charger automatiquement les données au démarrage avec la logique asynchrone
+    // Conformément à la mémoire "Initialisation asynchrone du tableau de bord au démarrage"
     this.loadCounts();
   }
 
   private async loadCounts(fromCache: boolean = true, forceRefresh: boolean = false): Promise<void> {
     try {
-      this.isLoading = true;
-      this.updateLoadingState();
-      
       // Vérifier si les données sont dans le sessionStorage
       if (fromCache && !forceRefresh) {
         const cachedData = sessionStorage.getItem('dashboardStats');
         if (cachedData) {
           const stats = JSON.parse(cachedData);
-          this.centresCount = stats.centresCount;
-          this.abonnesCount = stats.abonnesCount;
-          this.creancesCount = stats.creancesCount;
           
-          this.updateCentresDisplay();
-          this.updateAbonnesDisplay();
-          this.updateCreancesDisplay();
+          // Charger les données disponibles individuellement
+          if (stats.hasOwnProperty('centresCount')) {
+            this.centresCount = stats.centresCount;
+            this.updateCentresDisplay();
+          }
           
-          this.isLoading = false;
+          if (stats.hasOwnProperty('abonnesCount')) {
+            this.abonnesCount = stats.abonnesCount;
+            this.updateAbonnesDisplay();
+          }
+          
+          if (stats.hasOwnProperty('creancesCount')) {
+            this.creancesCount = stats.creancesCount;
+            this.updateCreancesDisplay();
+          }
+          
           return;
         }
       }
       
-      // Effectuer les requêtes en parallèle
-      const centresPromise = DbfService.getCentresCount(forceRefresh)
+      // Afficher l'état de chargement individuel pour chaque carte
+      this.updateCentresLoadingState();
+      this.updateAbonnesLoadingState();
+      this.updateCreancesLoadingState();
+      
+      // Effectuer les requêtes de manière indépendante
+      // Chaque requête affiche ses résultats dès qu'ils sont disponibles
+      // Espacer légèrement les requêtes pour permettre un rendu progressif
+      
+      // Requête pour les centres
+      DbfService.getCentresCount(forceRefresh)
         .then(count => {
           this.centresCount = count;
           this.updateCentresDisplay();
+          // Sauvegarder dans le cache partiel
+          this.savePartialResult('centresCount', count);
         })
         .catch(error => {
           console.error('Erreur lors de la récupération du nombre de centres:', error);
@@ -50,94 +68,97 @@ export class Dashboard {
           this.updateCentresDisplay();
         });
       
-      const abonnesPromise = DbfService.getAbonnesCount(forceRefresh)
-        .then(count => {
-          this.abonnesCount = count;
-          this.updateAbonnesDisplay();
-        })
-        .catch(error => {
-          console.error('Erreur lors de la récupération du nombre d\'abonnés:', error);
-          this.abonnesCount = 0;
-          this.updateAbonnesDisplay();
-        });
+      // Attendre un court instant avant la requête suivante
+      setTimeout(() => {
+        DbfService.getAbonnesCount(forceRefresh)
+          .then(count => {
+            this.abonnesCount = count;
+            this.updateAbonnesDisplay();
+            // Sauvegarder dans le cache partiel
+            this.savePartialResult('abonnesCount', count);
+          })
+          .catch(error => {
+            console.error('Erreur lors de la récupération du nombre d\'abonnés:', error);
+            this.abonnesCount = 0;
+            this.updateAbonnesDisplay();
+          });
+      }, 50);
       
-      // Afficher la barre de progression pendant le chargement
-      this.updateLoadingState();
-      
-      const creancesPromise = this.loadCreancesWithProgress(forceRefresh)
-        .then(count => {
-          this.creancesCount = count;
-          this.updateCreancesDisplay();
-        })
-        .catch(error => {
-          console.error('Erreur lors de la récupération des créances:', error);
-          this.creancesCount = 0;
-          this.updateCreancesDisplay();
-        });
-      
-      // Attendre que toutes les requêtes soient terminées
-      await Promise.all([centresPromise, abonnesPromise, creancesPromise]);
-      
-      // Sauvegarder les données dans le sessionStorage
-      const stats = {
-        centresCount: this.centresCount,
-        abonnesCount: this.abonnesCount,
-        creancesCount: this.creancesCount,
-        timestamp: Date.now()
-      };
-      sessionStorage.setItem('dashboardStats', JSON.stringify(stats));
-      
-      this.isLoading = false;
+      // Attendre un peu plus pour la requête des créances
+      setTimeout(() => {
+        this.loadCreancesWithProgress(forceRefresh)
+          .then(count => {
+            this.creancesCount = count;
+            this.updateCreancesDisplay();
+            // Sauvegarder dans le cache partiel
+            this.savePartialResult('creancesCount', count);
+          })
+          .catch(error => {
+            console.error('Erreur lors de la récupération des créances:', error);
+            this.creancesCount = 0;
+            this.updateCreancesDisplay();
+          });
+      }, 100);
     } catch (error) {
       console.error('Erreur lors du chargement des données:', error);
-      this.isLoading = false;
-      this.updateLoadingState();
+      // En cas d'erreur globale, afficher les erreurs dans chaque carte
+      this.updateCentresDisplay();
+      this.updateAbonnesDisplay();
+      this.updateCreancesDisplay();
     }
   }
 
-  private updateLoadingState(): void {
+  private updateCentresLoadingState(): void {
     const centresCard = this.container.querySelector('.centres-stat-card');
-    const abonnesCard = this.container.querySelector('.abonnes-stat-card');
-    const creancesCard = this.container.querySelector('.creances-stat-card');
     
     if (centresCard) {
-      if (this.isLoading) {
-        centresCard.innerHTML = `
-          <h3>Centres</h3>
-          <p class="stat-value">
-            <span class="loading-spinner"></span>
-          </p>
-          <p class="stat-change">Chargement...</p>
-        `;
-      }
+      centresCard.innerHTML = `
+        <h3>Centres</h3>
+        <p class="stat-value">
+          <span class="loading-spinner"></span>
+        </p>
+        <p class="stat-change">Chargement...</p>
+      `;
     }
+  }
+  
+  private updateAbonnesLoadingState(): void {
+    const abonnesCard = this.container.querySelector('.abonnes-stat-card');
     
     if (abonnesCard) {
-      if (this.isLoading) {
-        abonnesCard.innerHTML = `
-          <h3>Abonnés</h3>
-          <p class="stat-value">
-            <span class="loading-spinner"></span>
-          </p>
-          <p class="stat-change">Chargement...</p>
-        `;
-      }
+      abonnesCard.innerHTML = `
+        <h3>Abonnés</h3>
+        <p class="stat-value">
+          <span class="loading-spinner"></span>
+        </p>
+        <p class="stat-change">Chargement...</p>
+      `;
     }
+  }
+  
+  private updateCreancesLoadingState(): void {
+    const creancesCard = this.container.querySelector('.creances-stat-card');
     
     if (creancesCard) {
-      if (this.isLoading) {
-        creancesCard.innerHTML = `
-          <h3>Portefeuille Abonnés</h3>
-          <p class="stat-value">
-            <span class="loading-spinner"></span>
-          </p>
-          <div class="progress-bar">
-            <div class="progress-fill" style="width: 0%"></div>
-          </div>
-          <p class="stat-change">Chargement... 0%</p>
-        `;
-      }
+      creancesCard.innerHTML = `
+        <h3>Portefeuille Abonnés</h3>
+        <p class="stat-value">
+          <span class="loading-spinner"></span>
+        </p>
+        <div class="progress-bar">
+          <div class="progress-fill" style="width: 0%"></div>
+        </div>
+        <p class="stat-change">Chargement... 0%</p>
+      `;
     }
+  }
+  
+  private updateLoadingState(): void {
+    // Cette méthode est conservée pour compatibilité mais n'est plus utilisée
+    // Le chargement est maintenant géré individuellement par carte
+    this.updateCentresLoadingState();
+    this.updateAbonnesLoadingState();
+    this.updateCreancesLoadingState();
   }
 
 
@@ -235,12 +256,6 @@ export class Dashboard {
         </div>
         
         <div class="stat-card">
-          <h3>Ventes aujourd'hui</h3>
-          <p class="stat-value">€1,250</p>
-          <p class="stat-change positive">+12% par rapport à hier</p>
-        </div>
-        
-        <div class="stat-card">
           <h3>Nouveaux clients</h3>
           <p class="stat-value">24</p>
           <p class="stat-change positive">+8% par rapport à hier</p>
@@ -265,7 +280,7 @@ export class Dashboard {
     `;
   }
 
-  private async loadCreancesWithProgress(forceRefresh: boolean = false): Promise<number> {
+  private loadCreancesWithProgress(forceRefresh: boolean = false): Promise<number> {
     // Créer une promesse pour le chargement des données
     const loadDataPromise = DbfService.getAbonnesCreances(forceRefresh);
     
@@ -296,20 +311,56 @@ export class Dashboard {
       }
     }, 500); // Intervalle légèrement augmenté pour refléter les meilleures performances
     
-    // Attendre que les données soient chargées
-    const result = await loadDataPromise;
+    // Ne pas attendre que les données soient chargées
+    // Retourner la promesse pour permettre un traitement asynchrone
+    loadDataPromise
+      .then(result => {
+        // Arrêter la simulation de progression
+        clearInterval(interval);
+        
+        // Mettre à jour l'affichage avec le résultat
+        this.creancesCount = result;
+        this.updateCreancesDisplay();
+        // Sauvegarder dans le cache partiel
+        this.savePartialResult('creancesCount', result);
+        
+        return result;
+      })
+      .catch(error => {
+        // Arrêter la simulation de progression en cas d'erreur
+        clearInterval(interval);
+        
+        console.error('Erreur lors de la récupération des créances:', error);
+        this.creancesCount = 0;
+        this.updateCreancesDisplay();
+        
+        throw error;
+      });
     
-    // Arrêter la simulation de progression
-    clearInterval(interval);
-    
-    // Attendre un peu pour s'assurer que la dernière mise à jour est visible
-    await new Promise(resolve => setTimeout(resolve, 100));
-    
-    return result;
+    // Retourner la promesse originale
+    return loadDataPromise;
   }
   
   public getElement(): HTMLElement {
     return this.container;
+  }
+  
+  // Méthode pour sauvegarder les résultats partiels dans le cache
+  private savePartialResult(key: string, value: any): void {
+    try {
+      // Récupérer les données existantes du cache
+      const cachedData = sessionStorage.getItem('dashboardStats');
+      const stats = cachedData ? JSON.parse(cachedData) : {};
+      
+      // Mettre à jour la valeur spécifique
+      stats[key] = value;
+      stats.timestamp = Date.now();
+      
+      // Sauvegarder les données mises à jour
+      sessionStorage.setItem('dashboardStats', JSON.stringify(stats));
+    } catch (error) {
+      console.error('Erreur lors de la sauvegarde partielle des données:', error);
+    }
   }
   
   public refreshData(): void {

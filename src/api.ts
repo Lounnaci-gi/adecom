@@ -139,6 +139,28 @@ export async function updateDbfPath(dbfPath: string) {
 }
 
 /**
+ * Rafraîchit le cache du serveur
+ */
+export async function refreshServerCache() {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/cache/refresh`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      }
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('Erreur lors du rafraîchissement du cache serveur:', error);
+    throw error;
+  }
+}
+
+/**
  * Récupère le chemin actuel du dossier DBF
  */
 export async function getDbfPath() {

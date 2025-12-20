@@ -4,6 +4,7 @@ import { Dashboard } from '../components/Dashboard';
 import { ClientsView } from './ClientsView';
 import { SettingsView } from './SettingsView';
 import { StatistiqueAbonnesView } from './StatistiqueAbonnesView';
+import { DbfService } from '../services/dbfService';
 
 export class MainView {
   private navbar: Navbar;
@@ -115,6 +116,9 @@ export class MainView {
     if (this.currentStatistiqueAbonnesView) {
       this.currentStatistiqueAbonnesView.loadAbonnesData(true);
     }
+    
+    // Rafraîchir le cache serveur
+    DbfService.refreshServerCache();
   }
 
   private showSettings(): void {

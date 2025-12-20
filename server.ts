@@ -12,13 +12,40 @@ dotenv.config();
 // Configuration du dossier DBF
 let DBF_FOLDER_PATH = process.env.DBF_FOLDER_PATH || process.env.VITE_DBF_FOLDER_PATH || 'D:/epeor';
 
-// Cache pour les créances
-// Augmenter la durée de vie du cache à 30 minutes pour éviter les requêtes trop fréquentes
-let creancesCache: { totalCreances: number; timestamp: number } | null = null;
+// Système de cache serveur
+// Durée de vie du cache : 30 minutes
 const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes
+
+// Interface pour le cache
+interface ServerCache<T> {
+  data: T;
+  timestamp: number;
+}
+
+// Cache pour les différents types de données
+let creancesCache: ServerCache<number> | null = null;
+let centresCountCache: ServerCache<number> | null = null;
+let abonnesCountCache: ServerCache<number> | null = null;
+let abonnesCountByTypeCache: ServerCache<any> | null = null;
+let abonnesCompteurArretCache: ServerCache<number> | null = null;
+let abonnesSansCompteurCache: ServerCache<number> | null = null;
 
 // Initialisation du service SQL
 const dbfSqlService = new DbfSqlService();
+
+// Fonction utilitaire pour vérifier si un cache est valide
+function isCacheValid<T>(cache: ServerCache<T> | null): boolean {
+  if (!cache) return false;
+  return Date.now() - cache.timestamp < CACHE_DURATION;
+}
+
+// Fonction utilitaire pour mettre en cache des données
+function setCache<T>(data: T): ServerCache<T> {
+  return {
+    data,
+    timestamp: Date.now()
+  };
+}
 
 // Fonction pour vérifier l'existence des fichiers d'index
 function checkIndexFiles(folderPath: string): string[] {
@@ -153,6 +180,15 @@ app.get('/api/dbf-files/:filename/exists', (req, res) => {
 // Utilise les fichiers d'index NTX si disponibles pour accélérer les requêtes
 app.get('/api/centres/count', (req, res) => {
   try {
+    // Vérifier si les données sont en cache
+    if (isCacheValid(centresCountCache)) {
+      console.log('Retour du nombre de centres depuis le cache');
+      return res.json({
+        count: centresCountCache!.data,
+        fromCache: true
+      });
+    }
+    
     const filePath = path.join(DBF_FOLDER_PATH, 'TABCODE.DBF');
     
     // Vérifier si le fichier existe
@@ -214,10 +250,14 @@ app.get('/api/centres/count', (req, res) => {
       }
     }
     
+    // Mettre en cache
+    centresCountCache = setCache(centresCount);
+    
     res.json({
       count: centresCount,
       indexUsed: specificTabcodeIndexes.length > 0 ? specificTabcodeIndexes.join(', ') : (tabcodeIndexes.length > 0 ? tabcodeIndexes.join(', ') : null),
-      indexCount: specificTabcodeIndexes.length > 0 ? specificTabcodeIndexes.length : tabcodeIndexes.length
+      indexCount: specificTabcodeIndexes.length > 0 ? specificTabcodeIndexes.length : tabcodeIndexes.length,
+      fromCache: false
     });
   } catch (error) {
     console.error('Erreur lors du comptage des centres:', error);
@@ -312,6 +352,15 @@ app.get('/api/centres/list', (req, res) => {
 // Utilise les fichiers d'index NTX si disponibles pour accélérer les requêtes
 app.get('/api/abonnes/count', (req, res) => {
   try {
+    // Vérifier si les données sont en cache
+    if (isCacheValid(abonnesCountCache)) {
+      console.log('Retour du nombre d\'abonnés depuis le cache');
+      return res.json({
+        count: abonnesCountCache!.data,
+        fromCache: true
+      });
+    }
+    
     const filePath = path.join(DBF_FOLDER_PATH, 'ABONNE.DBF');
     
     // Vérifier si le fichier existe
@@ -385,10 +434,14 @@ app.get('/api/abonnes/count', (req, res) => {
       }
     }
     
+    // Mettre en cache
+    abonnesCountCache = setCache(abonnesCount);
+    
     res.json({
       count: abonnesCount,
       indexUsed: specificAbonneIndexes.length > 0 ? specificAbonneIndexes.join(', ') : (abonneIndexes.length > 0 ? abonneIndexes.join(', ') : null),
-      indexCount: specificAbonneIndexes.length > 0 ? specificAbonneIndexes.length : abonneIndexes.length
+      indexCount: specificAbonneIndexes.length > 0 ? specificAbonneIndexes.length : abonneIndexes.length,
+      fromCache: false
     });
   } catch (error) {
     console.error('Erreur lors du comptage des abonnés:', error);
@@ -403,6 +456,15 @@ app.get('/api/abonnes/count', (req, res) => {
 // Utilise les fichiers d'index NTX si disponibles pour accélérer les requêtes
 app.get('/api/abonnes/count-by-type', (req, res) => {
   try {
+    // Vérifier si les données sont en cache
+    if (isCacheValid(abonnesCountByTypeCache)) {
+      console.log('Retour des données des abonnés par type depuis le cache');
+      return res.json({
+        ...abonnesCountByTypeCache!.data,
+        fromCache: true
+      });
+    }
+    
     const abonneFilePath = path.join(DBF_FOLDER_PATH, 'ABONNE.DBF');
     const tabcodeFilePath = path.join(DBF_FOLDER_PATH, 'TABCODE.DBF');
     const abonmentFilePath = path.join(DBF_FOLDER_PATH, 'ABONMENT.DBF');
@@ -630,7 +692,8 @@ app.get('/api/abonnes/count-by-type', (req, res) => {
       }))
       .sort((a, b) => b.count - a.count); // Tri par nombre décroissant
     
-    res.json({
+    // Préparer la réponse
+    const response = {
       totalCount: Object.values(typabonCount).reduce((sum, count) => sum + count, 0),
       totalResilieCount: Object.values(typabonResilieCount).reduce((sum, count) => sum + count, 0),
       totalSansCompteurCount: Object.values(typabonSansCompteurCount).reduce((sum, count) => sum + count, 0),
@@ -646,6 +709,14 @@ app.get('/api/abonnes/count-by-type', (req, res) => {
         tabcode: specificTabcodeIndexes.length > 0 ? specificTabcodeIndexes.length : tabcodeIndexes.length,
         abonment: specificAbonmentIndexes.length > 0 ? specificAbonmentIndexes.length : abonmentIndexes.length
       }
+    };
+    
+    // Mettre en cache
+    abonnesCountByTypeCache = setCache(response);
+    
+    res.json({
+      ...response,
+      fromCache: false
     });
   } catch (error) {
     console.error('Erreur lors du comptage des abonnés par type:', error);
@@ -660,6 +731,15 @@ app.get('/api/abonnes/count-by-type', (req, res) => {
 // Utilise les fichiers d'index NTX si disponibles pour accélérer les requêtes
 app.get('/api/abonnes/compteur-arret', (req, res) => {
   try {
+    // Vérifier si les données sont en cache
+    if (isCacheValid(abonnesCompteurArretCache)) {
+      console.log('Retour du nombre d\'abonnés avec compteur à l\'arrêt depuis le cache');
+      return res.json({
+        count: abonnesCompteurArretCache!.data,
+        fromCache: true
+      });
+    }
+    
     const abonmentFilePath = path.join(DBF_FOLDER_PATH, 'ABONMENT.DBF');
     
     // Vérifier si le fichier existe
@@ -728,10 +808,14 @@ app.get('/api/abonnes/compteur-arret', (req, res) => {
       }
     }
     
+    // Mettre en cache
+    abonnesCompteurArretCache = setCache(compteurArretCount);
+    
     res.json({
       count: compteurArretCount,
       indexUsed: specificAbonmentIndexes.length > 0 ? specificAbonmentIndexes.join(', ') : (abonmentIndexes.length > 0 ? abonmentIndexes.join(', ') : null),
-      indexCount: specificAbonmentIndexes.length > 0 ? specificAbonmentIndexes.length : abonmentIndexes.length
+      indexCount: specificAbonmentIndexes.length > 0 ? specificAbonmentIndexes.length : abonmentIndexes.length,
+      fromCache: false
     });
   } catch (error) {
     console.error('Erreur lors du comptage des abonnés avec compteur à l\'arrêt:', error);
@@ -746,6 +830,15 @@ app.get('/api/abonnes/compteur-arret', (req, res) => {
 // Utilise les fichiers d'index NTX si disponibles pour accélérer les requêtes
 app.get('/api/abonnes/sans-compteur', (req, res) => {
   try {
+    // Vérifier si les données sont en cache
+    if (isCacheValid(abonnesSansCompteurCache)) {
+      console.log('Retour du nombre d\'abonnés sans compteur depuis le cache');
+      return res.json({
+        count: abonnesSansCompteurCache!.data,
+        fromCache: true
+      });
+    }
+    
     const abonmentFilePath = path.join(DBF_FOLDER_PATH, 'ABONMENT.DBF');
     
     // Vérifier si le fichier existe
@@ -814,15 +907,41 @@ app.get('/api/abonnes/sans-compteur', (req, res) => {
       }
     }
     
+    // Mettre en cache
+    abonnesSansCompteurCache = setCache(sansCompteurCount);
+    
     res.json({
       count: sansCompteurCount,
       indexUsed: specificAbonmentIndexes.length > 0 ? specificAbonmentIndexes.join(', ') : (abonmentIndexes.length > 0 ? abonmentIndexes.join(', ') : null),
-      indexCount: specificAbonmentIndexes.length > 0 ? specificAbonmentIndexes.length : abonmentIndexes.length
+      indexCount: specificAbonmentIndexes.length > 0 ? specificAbonmentIndexes.length : abonmentIndexes.length,
+      fromCache: false
     });
   } catch (error) {
     console.error('Erreur lors du comptage des abonnés sans compteur:', error);
     res.status(500).json({ 
       error: 'Erreur serveur lors du comptage des abonnés sans compteur',
+      message: (error as Error).message
+    });
+  }
+});
+
+// Route pour forcer le rafraîchissement du cache
+app.post('/api/cache/refresh', (req, res) => {
+  try {
+    // Vider tous les caches
+    creancesCache = null;
+    centresCountCache = null;
+    abonnesCountCache = null;
+    abonnesCountByTypeCache = null;
+    abonnesCompteurArretCache = null;
+    abonnesSansCompteurCache = null;
+    
+    console.log('Tous les caches du serveur ont été vidés');
+    res.json({ success: true, message: 'Cache serveur vidé avec succès' });
+  } catch (error) {
+    console.error('Erreur lors du vidage du cache serveur:', error);
+    res.status(500).json({ 
+      error: 'Erreur serveur lors du vidage du cache',
       message: (error as Error).message
     });
   }
@@ -917,6 +1036,225 @@ app.post('/api/settings/save-env', (req, res) => {
     console.error('Erreur lors de l\'enregistrement du chemin DBF dans .env:', error);
     res.status(500).json({ 
       error: 'Erreur serveur lors de l\'enregistrement du chemin DBF dans .env',
+      message: (error as Error).message
+    });
+  }
+});
+
+// Route pour obtenir toutes les statistiques du dashboard avec streaming
+// Chaque statistique est calculée de manière indépendante et envoyée dès qu'elle est disponible
+app.get('/api/dashboard/stats', async (req, res) => {
+  try {
+    // Vérifier si le rafraîchissement est forcé
+    const forceRefresh = req.query.refresh === 'true';
+    
+    // Configurer la réponse pour le streaming
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.flushHeaders();
+    
+    // Fonction pour envoyer une donnée
+    const sendStat = (statName: string, data: any) => {
+      res.write(`event: ${statName}\ndata: ${JSON.stringify(data)}\n\n`);
+    };
+    
+    // Exécuter toutes les requêtes de manière indépendante
+    const promises = [
+      // Nombre de centres
+      (async () => {
+        try {
+          // Vérifier si les données sont en cache
+          if (!forceRefresh && isCacheValid(centresCountCache)) {
+            sendStat('centres', { count: centresCountCache!.data, fromCache: true });
+            return;
+          }
+          
+          const filePath = path.join(DBF_FOLDER_PATH, 'TABCODE.DBF');
+          
+          // Vérifier si le fichier existe
+          if (!fs.existsSync(filePath)) {
+            throw new Error('Fichier TABCODE.DBF non trouvé');
+          }
+          
+          // Lire les informations d'en-tête
+          const headerBuffer = Buffer.alloc(32);
+          const fd = fs.openSync(filePath, 'r');
+          fs.readSync(fd, headerBuffer, 0, 32, 0);
+          
+          const header = {
+            numberOfRecords: headerBuffer.readUInt32LE(4),
+            headerLength: headerBuffer.readUInt16LE(8),
+            recordLength: headerBuffer.readUInt16LE(10)
+          };
+          
+          fs.closeSync(fd);
+          
+          // Compter les centres (codes commençant par 'S')
+          let centresCount = 0;
+          for (let i = 0; i < header.numberOfRecords; i++) {
+            const recordOffset = header.headerLength + (i * header.recordLength);
+            
+            const recordBuffer = Buffer.alloc(header.recordLength + 10);
+            const fd = fs.openSync(filePath, 'r');
+            fs.readSync(fd, recordBuffer, 0, header.recordLength, recordOffset);
+            fs.closeSync(fd);
+            
+            // Extraire le CODE_AFFEC (champ 1)
+            const isDeleted = recordBuffer.readUInt8(0) === 0x2A;
+            if (!isDeleted) {
+              const codeAffec = recordBuffer.subarray(1, 5).toString('utf-8').trim();
+              if (codeAffec && codeAffec.startsWith('S')) {
+                centresCount++;
+              }
+            }
+          }
+          
+          // Mettre en cache
+          centresCountCache = setCache(centresCount);
+          
+          sendStat('centres', { count: centresCount, fromCache: false });
+        } catch (error) {
+          console.error('Erreur lors du comptage des centres:', error);
+          sendStat('centres', { count: 0, error: (error as Error).message });
+        }
+      })(),
+      
+      // Nombre d'abonnés
+      (async () => {
+        try {
+          // Vérifier si les données sont en cache
+          if (!forceRefresh && isCacheValid(abonnesCountCache)) {
+            sendStat('abonnes', { count: abonnesCountCache!.data, fromCache: true });
+            return;
+          }
+          
+          const filePath = path.join(DBF_FOLDER_PATH, 'ABONNE.DBF');
+          
+          // Vérifier si le fichier existe
+          if (!fs.existsSync(filePath)) {
+            throw new Error('Fichier ABONNE.DBF non trouvé');
+          }
+          
+          // Lire les informations d'en-tête
+          const headerBuffer = Buffer.alloc(32);
+          const fd = fs.openSync(filePath, 'r');
+          fs.readSync(fd, headerBuffer, 0, 32, 0);
+          
+          const header = {
+            numberOfRecords: headerBuffer.readUInt32LE(4),
+            headerLength: headerBuffer.readUInt16LE(8),
+            recordLength: headerBuffer.readUInt16LE(10)
+          };
+          
+          fs.closeSync(fd);
+          
+          // Compter les abonnés
+          let abonnesCount = 0;
+          for (let i = 0; i < header.numberOfRecords; i++) {
+            const recordOffset = header.headerLength + (i * header.recordLength);
+            
+            const recordBuffer = Buffer.alloc(header.recordLength + 10);
+            const fd = fs.openSync(filePath, 'r');
+            fs.readSync(fd, recordBuffer, 0, header.recordLength, recordOffset);
+            fs.closeSync(fd);
+            
+            // Vérifier si l'enregistrement est supprimé
+            const isDeleted = recordBuffer.readUInt8(0) === 0x2A;
+            if (!isDeleted) {
+              // Calculer l'offset pour le champ TYPABON (champ 12)
+              let fieldOffset = 1; // +1 pour ignorer l'indicateur de suppression
+              
+              // Passer les champs 1, 2, 3
+              fieldOffset += 2 + 2 + 3; // UNITE (2) + SECTEUR (2) + TOURNEE (3)
+              
+              // Passer les champs 4, 5, 6, 7, 8, 9, 10, 11
+              fieldOffset += 6 + 30 + 4 + 10 + 3 + 2 + 2 + 4; // NUMAB (6) + RAISOC (30) + CODRUE (4) + BLOC (10) + ENTREE (3) + ETAGE (2) + AILE (2) + NDOM (4)
+              
+              // TYPABON (champ 12) - 2 caractères
+              const typabon = recordBuffer.subarray(fieldOffset, fieldOffset + 2).toString('utf-8').trim();
+              
+              // Ne pas compter les abonnés dont TYPABON est null ou vide
+              if (typabon && typabon !== '') {
+                abonnesCount++;
+              }
+            }
+          }
+          
+          // Mettre en cache
+          abonnesCountCache = setCache(abonnesCount);
+          
+          sendStat('abonnes', { count: abonnesCount, fromCache: false });
+        } catch (error) {
+          console.error('Erreur lors du comptage des abonnés:', error);
+          sendStat('abonnes', { count: 0, error: (error as Error).message });
+        }
+      })(),
+      
+      // Créances des abonnés
+      (async () => {
+        try {
+          // Vérifier si les données sont en cache
+          if (!forceRefresh && isCacheValid(creancesCache)) {
+            sendStat('creances', { 
+              totalCreances: creancesCache!.data, 
+              executionTime: 0, 
+              rowCount: 1, 
+              fromCache: true 
+            });
+            return;
+          }
+          
+          // Mesurer le temps d'exécution
+          const startTime = Date.now();
+          
+          // Exécuter la requête SQL directement sur le fichier DBF
+          const sqlQuery = `SELECT SUM(MONTTC) AS Sum_MONTTC FROM FACTURES WHERE PAIEMENT = 'T' GROUP BY PAIEMENT`;
+          const result = await dbfSqlService.executeSelectQuery(sqlQuery);
+          
+          // Extraire le total des créances du résultat
+          let totalCreances = 0;
+          if (result.rows.length > 0) {
+            // Le résultat peut être dans différentes propriétés selon l'implémentation
+            totalCreances = result.rows[0].Sum_MONTTC || result.rows[0].sum_MONTTC || result.rows[0].MONTTC || 0;
+          }
+          
+          const executionTime = Date.now() - startTime;
+          
+          // Mettre en cache les données
+          creancesCache = {
+            data: parseFloat(totalCreances.toFixed(2)),
+            timestamp: Date.now()
+          };
+          
+          sendStat('creances', {
+            totalCreances: parseFloat(totalCreances.toFixed(2)),
+            executionTime: executionTime,
+            rowCount: result.count,
+            fromCache: false
+          });
+        } catch (error) {
+          console.error('Erreur lors du calcul des créances:', error);
+          sendStat('creances', { 
+            totalCreances: 0, 
+            error: (error as Error).message 
+          });
+        }
+      })()
+    ];
+    
+    // Attendre que toutes les promesses soient résolues
+    await Promise.all(promises);
+    
+    // Envoyer un message de fin
+    res.write('event: end\ndata: {}\n\n');
+    
+    // Fermer la connexion
+    res.end();
+  } catch (error) {
+    console.error('Erreur lors de la récupération des statistiques du dashboard:', error);
+    res.status(500).json({ 
+      error: 'Erreur serveur lors de la récupération des statistiques',
       message: (error as Error).message
     });
   }

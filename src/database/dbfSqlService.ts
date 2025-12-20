@@ -60,7 +60,7 @@ export class DbfSqlService {
         let hasMoreRecords = true;
         let batchCount = 0;
         
-        console.log(`Début du traitement des enregistrements pour la requête: ${query}`);
+        // Suppression du log de début de traitement pour éviter le spam dans la console
         
         while (hasMoreRecords) {
           // Lire un lot d'enregistrements
@@ -85,17 +85,14 @@ export class DbfSqlService {
           offset += records.length;
           batchCount++;
           
-          // Journaliser la progression tous les 10 lots
-          if (batchCount % 10 === 0) {
-            console.log(`Traitement du lot ${batchCount}, offset: ${offset}, enregistrements filtrés: ${lotFiltered.length}, somme partielle: ${sum}`);
-          }
+          // Suppression des logs de progression pour éviter le spam dans la console
           
           // Vérifier s'il y a plus d'enregistrements
           hasMoreRecords = records.length === batchSize;
         }
         
         const executionTime = Date.now() - startTime;
-        console.log(`Fin du traitement. Lots traités: ${batchCount}, temps total: ${executionTime}ms, somme totale: ${sum}`);
+        // Suppression du log de fin de traitement pour éviter le spam dans la console
         
         // Retourner le résultat avec la somme
         return {

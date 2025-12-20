@@ -1,5 +1,5 @@
 // dbfService.ts
-import { getDbfFiles, getCentresCount, getAbonnesCount, getAbonnesCountByType, getAbonnesCompteurArret, getAbonnesSansCompteur, updateDbfPath, getDbfPath, getCentresList, saveCentreToEnv, getAbonnesCreances } from '../api';
+import { getDbfFiles, getCentresCount, getAbonnesCount, getAbonnesCountByType, getAbonnesCompteurArret, getAbonnesSansCompteur, updateDbfPath, getDbfPath, getCentresList, saveCentreToEnv, getAbonnesCreances, refreshServerCache } from '../api';
 import { dbfConfig } from '../database/dbfConnection';
 
 /**
@@ -304,6 +304,19 @@ export class DbfService {
       return result.success || false;
     } catch (error) {
       console.error('Erreur lors de l\'enregistrement du centre dans .env:', error);
+      return false;
+    }
+  }
+  
+  /**
+   * Rafraîchit le cache du serveur
+   */
+  static async refreshServerCache(): Promise<boolean> {
+    try {
+      const result = await refreshServerCache();
+      return result.success || false;
+    } catch (error) {
+      console.error('Erreur lors du rafraîchissement du cache serveur:', error);
       return false;
     }
   }
