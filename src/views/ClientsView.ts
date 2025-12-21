@@ -3,6 +3,7 @@ import { DbfService } from '../services/dbfService';
 
 export class ClientsView {
   private container: HTMLElement;
+    private creancesEau: number = 0;
 
   constructor() {
     this.container = document.createElement('div');
@@ -42,6 +43,13 @@ export class ClientsView {
         <div class="stat-card">
           <h3>Créances Total Résiliés</h3>
           <p class="stat-value" id="creances-resilies-value">
+            <span class="loading-spinner"></span>
+          </p>
+        </div>
+        
+        <div class="stat-card">
+          <h3>Créances Eau</h3>
+          <p class="stat-value" id="creances-eau-value">
             <span class="loading-spinner"></span>
           </p>
         </div>
@@ -228,10 +236,64 @@ export class ClientsView {
       this.updateCreancesResiliesDisplay(0);
     }
   }
+  
+  private async loadCreancesEauData(): Promise<void> {
+    try {
+      // Vérifier si les données sont dans le sessionStorage
+      const cachedData = sessionStorage.getItem('creancesEau');
+      if (cachedData) {
+        const data = JSON.parse(cachedData);
+        // Vérifier si les données ne sont pas expirées (5 minutes)
+        if (Date.now() - data.timestamp < 5 * 60 * 1000) {
+          this.updateCreancesEauDisplay(data.value);
+          return;
+        }
+      }
+
+      // Charger les données depuis le service
+      const creancesEau = await DbfService.getAbonnesCreancesEau();
+      
+      // Sauvegarder dans le sessionStorage
+      const cacheData = {
+        value: creancesEau,
+        timestamp: Date.now()
+      };
+      sessionStorage.setItem('creancesEau', JSON.stringify(cacheData));
+      
+      // Mettre à jour l'affichage
+      this.updateCreancesEauDisplay(creancesEau);
+    } catch (error) {
+      console.error('Erreur lors du chargement des créances Eau:', error);
+      this.updateCreancesEauDisplay(0);
+    }
+  }
+  
+  private async loadCreancesEauDataForce(): Promise<void> {
+    try {
+      // Supprimer les données du cache
+      sessionStorage.removeItem('creancesEau');
+      
+      // Charger les données depuis le service en forçant le rafraîchissement
+      const creancesEau = await DbfService.getAbonnesCreancesEau(true);
+      
+      // Sauvegarder dans le sessionStorage
+      const cacheData = {
+        value: creancesEau,
+        timestamp: Date.now()
+      };
+      sessionStorage.setItem('creancesEau', JSON.stringify(cacheData));
+      
+      // Mettre à jour l'affichage
+      this.updateCreancesEauDisplay(creancesEau);
+    } catch (error) {
+      console.error('Erreur lors du chargement des créances Eau:', error);
+      this.updateCreancesEauDisplay(0);
+    }
+  }
 
   private async loadAllCreancesData(): Promise<void> {
     try {
-      // Charger les deux jeux de données en parallèle et mettre à jour l'affichage dès que chaque requête termine
+      // Charger les trois jeux de données en parallèle et mettre à jour l'affichage dès que chaque requête termine
       const creancesPromise = this.loadCreancesDataPromise().then(result => {
         this.updateCreancesDisplay(result);
         return result;
@@ -250,8 +312,17 @@ export class ClientsView {
         return 0;
       });
       
-      // Attendre que les deux requêtes soient terminées (pour la gestion des erreurs globale)
-      await Promise.all([creancesPromise, creancesResiliesPromise]);
+      const creancesEauPromise = this.loadCreancesEauDataPromise().then(result => {
+        this.updateCreancesEauDisplay(result);
+        return result;
+      }).catch(error => {
+        console.error('Erreur lors du chargement des créances Eau:', error);
+        this.updateCreancesEauDisplay(0);
+        return 0;
+      });
+      
+      // Attendre que les trois requêtes soient terminées (pour la gestion des erreurs globale)
+      await Promise.all([creancesPromise, creancesResiliesPromise, creancesEauPromise]);
     } catch (error) {
       console.error('Erreur lors du chargement des créances:', error);
       // Les erreurs individuelles sont déjà gérées dans les promesses
@@ -263,8 +334,9 @@ export class ClientsView {
       // Supprimer les données du cache
       sessionStorage.removeItem('creancesAbonnes');
       sessionStorage.removeItem('creancesResilies');
+      sessionStorage.removeItem('creancesEau');
       
-      // Charger les deux jeux de données en parallèle en forçant le rafraîchissement et mettre à jour l'affichage dès que chaque requête termine
+      // Charger les trois jeux de données en parallèle en forçant le rafraîchissement et mettre à jour l'affichage dès que chaque requête termine
       const creancesPromise = DbfService.getAbonnesCreances(true).then(async result => {
         // Sauvegarder dans le sessionStorage
         const cacheData = {
@@ -299,8 +371,25 @@ export class ClientsView {
         return 0;
       });
       
-      // Attendre que les deux requêtes soient terminées (pour la gestion des erreurs globale)
-      await Promise.all([creancesPromise, creancesResiliesPromise]);
+      const creancesEauPromise = DbfService.getAbonnesCreancesEau(true).then(async result => {
+        // Sauvegarder dans le sessionStorage
+        const cacheData = {
+          value: result,
+          timestamp: Date.now()
+        };
+        sessionStorage.setItem('creancesEau', JSON.stringify(cacheData));
+        
+        // Mettre à jour l'affichage
+        this.updateCreancesEauDisplay(result);
+        return result;
+      }).catch(error => {
+        console.error('Erreur lors du chargement des créances Eau:', error);
+        this.updateCreancesEauDisplay(0);
+        return 0;
+      });
+      
+      // Attendre que les trois requêtes soient terminées (pour la gestion des erreurs globale)
+      await Promise.all([creancesPromise, creancesResiliesPromise, creancesEauPromise]);
     } catch (error) {
       console.error('Erreur lors du chargement des créances:', error);
       // Les erreurs individuelles sont déjà gérées dans les promesses
@@ -354,6 +443,30 @@ export class ClientsView {
     
     return creancesResilies;
   }
+  
+  private async loadCreancesEauDataPromise(): Promise<number> {
+    // Vérifier si les données sont dans le sessionStorage
+    const cachedData = sessionStorage.getItem('creancesEau');
+    if (cachedData) {
+      const data = JSON.parse(cachedData);
+      // Vérifier si les données ne sont pas expirées (5 minutes)
+      if (Date.now() - data.timestamp < 5 * 60 * 1000) {
+        return data.value;
+      }
+    }
+
+    // Charger les données depuis le service
+    const creancesEau = await DbfService.getAbonnesCreancesEau();
+    
+    // Sauvegarder dans le sessionStorage
+    const cacheData = {
+      value: creancesEau,
+      timestamp: Date.now()
+    };
+    sessionStorage.setItem('creancesEau', JSON.stringify(cacheData));
+    
+    return creancesEau;
+  }
 
   private updateCreancesDisplayLoading(): void {
     const creancesElement = this.container.querySelector('#creances-value');
@@ -378,6 +491,25 @@ export class ClientsView {
     const creancesResiliesElement = this.container.querySelector('#creances-resilies-value');
     if (creancesResiliesElement) {
       creancesResiliesElement.innerHTML = '<span class="loading-spinner"></span>';
+    }
+  }
+  
+  private updateCreancesEauDisplay(value: number): void {
+    const creancesEauElement = this.container.querySelector('#creances-eau-value');
+    if (creancesEauElement) {
+      creancesEauElement.textContent = value.toLocaleString('fr-FR', { 
+        style: 'currency', 
+        currency: 'DZD',
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      });
+    }
+  }
+  
+  private updateCreancesEauDisplayLoading(): void {
+    const creancesEauElement = this.container.querySelector('#creances-eau-value');
+    if (creancesEauElement) {
+      creancesEauElement.innerHTML = '<span class="loading-spinner"></span>';
     }
   }
 

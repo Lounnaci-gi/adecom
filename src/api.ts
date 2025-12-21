@@ -241,3 +241,24 @@ export async function getAbonnesCreancesResilies(forceRefresh: boolean = false) 
     throw error;
   }
 }
+
+/**
+ * Récupère la somme des créances Eau depuis FACTURES.DBF
+ * @param forceRefresh Force le rafraîchissement des données
+ */
+export async function getAbonnesCreancesEau(forceRefresh: boolean = false) {
+  try {
+    const url = forceRefresh 
+      ? `${API_BASE_URL}/api/abonnes/creances-eau?refresh=true`
+      : `${API_BASE_URL}/api/abonnes/creances-eau`;
+      
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('Erreur lors de la récupération des créances Eau:', error);
+    throw error;
+  }
+}

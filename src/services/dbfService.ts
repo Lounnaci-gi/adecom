@@ -296,6 +296,21 @@ export class DbfService {
       return 0;
     }
   }
+  
+  /**
+   * Récupère la somme des créances Eau
+   * @param forceRefresh Force le rafraîchissement des données
+   */
+  static async getAbonnesCreancesEau(forceRefresh: boolean = false): Promise<number> {
+    try {
+      const result = await getAbonnesCreancesEau(forceRefresh);
+      return result.totalCreancesEau || 0;
+    } catch (error) {
+      console.error('Erreur lors de la récupération des créances Eau:', error);
+      // Retourner 0 en cas d'erreur
+      return 0;
+    }
+  }
 
   /**
    * Récupère le chemin actuel du dossier DBF
