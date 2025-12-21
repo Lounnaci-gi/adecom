@@ -774,6 +774,7 @@ tr:hover {
   display: flex;
   flex-direction: column;
   border: 1px solid var(--border-color);
+  min-height: 150px;
 }
 
 .stat-card:hover {
@@ -790,9 +791,17 @@ tr:hover {
 
 .stat-value {
   color: var(--primary);
-  font-size: 1.5rem;
+  font-size: clamp(1.1rem, 4vw, 1.5rem);
   font-weight: 700;
   margin: 0.5rem 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-height: 2.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: font-size 0.2s ease;
 }
 
 .stat-change {
