@@ -27,15 +27,15 @@ export class Navbar {
             <a href="#" class="navbar-link" data-view="portefeuille">Portefeuille</a>
           </li>
           <li class="navbar-item">
-            <a href="#" class="navbar-link" data-view="statistique-abonnes">Statistique Abonnés</a>
+            <a href="#" class="navbar-link" data-view="statistique-abonnes">Statistiques</a>
           </li>
           <li class="navbar-item">
             <a href="#" class="navbar-link" data-view="settings">Paramètres</a>
           </li>
+          <li class="navbar-item">
+            <button id="refresh-btn" class="navbar-link refresh-btn" aria-label="Refresh data">Actualiser</button>
+          </li>
           <li class="navbar-item theme-toggle">
-            <button id="refresh-btn" class="refresh-btn" aria-label="Refresh data">
-              <span class="refresh-icon">🔄</span>
-            </button>
             <button id="theme-toggle" class="theme-toggle-btn" aria-label="Toggle theme">
               <span class="theme-icon">🌙</span>
             </button>
