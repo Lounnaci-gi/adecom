@@ -12,20 +12,16 @@ export class Dashboard {
     this.container = document.createElement('div');
     this.container.className = 'dashboard';
     this.render();
-    // Charger automatiquement les données au démarrage avec la logique asynchrone
-    // Conformément à la mémoire "Initialisation asynchrone du tableau de bord au démarrage"
     this.loadCounts();
   }
 
   private async loadCounts(fromCache: boolean = true, forceRefresh: boolean = false): Promise<void> {
     try {
-      // Vérifier si les données sont dans le sessionStorage
       if (fromCache && !forceRefresh) {
         const cachedData = sessionStorage.getItem('dashboardStats');
         if (cachedData) {
           const stats = JSON.parse(cachedData);
           
-          // Charger les données disponibles individuellement
           if (stats.hasOwnProperty('centresCount')) {
             this.centresCount = stats.centresCount;
             this.updateCentresDisplay();
@@ -45,21 +41,14 @@ export class Dashboard {
         }
       }
       
-      // Afficher l'état de chargement individuel pour chaque carte
       this.updateCentresLoadingState();
       this.updateAbonnesLoadingState();
       this.updateCreancesLoadingState();
       
-      // Effectuer les requêtes de manière indépendante
-      // Chaque requête affiche ses résultats dès qu'ils sont disponibles
-      // Espacer légèrement les requêtes pour permettre un rendu progressif
-      
-      // Requête pour les centres
       DbfService.getCentresCount(forceRefresh)
         .then(count => {
           this.centresCount = count;
           this.updateCentresDisplay();
-          // Sauvegarder dans le cache partiel
           this.savePartialResult('centresCount', count);
         })
         .catch(error => {
@@ -68,13 +57,11 @@ export class Dashboard {
           this.updateCentresDisplay();
         });
       
-      // Attendre un court instant avant la requête suivante
       setTimeout(() => {
         DbfService.getAbonnesCount(forceRefresh)
           .then(count => {
             this.abonnesCount = count;
             this.updateAbonnesDisplay();
-            // Sauvegarder dans le cache partiel
             this.savePartialResult('abonnesCount', count);
           })
           .catch(error => {
@@ -84,13 +71,11 @@ export class Dashboard {
           });
       }, 50);
       
-      // Attendre un peu plus pour la requête des créances
       setTimeout(() => {
         this.loadCreancesWithProgress(forceRefresh)
           .then(count => {
             this.creancesCount = count;
             this.updateCreancesDisplay();
-            // Sauvegarder dans le cache partiel
             this.savePartialResult('creancesCount', count);
           })
           .catch(error => {
@@ -101,7 +86,6 @@ export class Dashboard {
       }, 100);
     } catch (error) {
       console.error('Erreur lors du chargement des données:', error);
-      // En cas d'erreur globale, afficher les erreurs dans chaque carte
       this.updateCentresDisplay();
       this.updateAbonnesDisplay();
       this.updateCreancesDisplay();
@@ -154,13 +138,10 @@ export class Dashboard {
   }
   
   private updateLoadingState(): void {
-    // Cette méthode est conservée pour compatibilité mais n'est plus utilisée
-    // Le chargement est maintenant géré individuellement par carte
     this.updateCentresLoadingState();
     this.updateAbonnesLoadingState();
     this.updateCreancesLoadingState();
   }
-
 
   
   private updateCentresDisplay(): void {
@@ -208,13 +189,10 @@ export class Dashboard {
       const statChange = creancesCard.querySelector('.stat-change') as HTMLElement;
       
       if (progressBar && progressFill && statChange) {
-        // Mettre à jour la largeur de la barre de progression
         progressFill.style.width = `${progress}%`;
         
-        // Mettre à jour le texte de progression
         statChange.textContent = `Chargement... ${Math.round(progress)}%`;
         
-        // Forcer la mise à jour du DOM
         statChange.offsetHeight;
       }
     }
@@ -281,12 +259,8 @@ export class Dashboard {
   }
 
   private loadCreancesWithProgress(forceRefresh: boolean = false): Promise<number> {
-    // Créer une promesse pour le chargement des données
     const loadDataPromise = DbfService.getAbonnesCreances(forceRefresh);
     
-    // Simuler une progression plus réaliste basée sur le nombre total d'enregistrements
-    // Le serveur traite environ 1.126.503 enregistrements
-    // Nouvelle approche avec des étapes plus espacées pour refléter l'optimisation
     const steps = [
       { records: 50000, progress: 5 },
       { records: 100000, progress: 10 },
@@ -309,25 +283,19 @@ export class Dashboard {
         this.updateCreancesProgress(step.progress);
         stepIndex++;
       }
-    }, 500); // Intervalle légèrement augmenté pour refléter les meilleures performances
+    }, 500);
     
-    // Ne pas attendre que les données soient chargées
-    // Retourner la promesse pour permettre un traitement asynchrone
     loadDataPromise
       .then(result => {
-        // Arrêter la simulation de progression
         clearInterval(interval);
         
-        // Mettre à jour l'affichage avec le résultat
         this.creancesCount = result;
         this.updateCreancesDisplay();
-        // Sauvegarder dans le cache partiel
         this.savePartialResult('creancesCount', result);
         
         return result;
       })
       .catch(error => {
-        // Arrêter la simulation de progression en cas d'erreur
         clearInterval(interval);
         
         console.error('Erreur lors de la récupération des créances:', error);
@@ -337,7 +305,6 @@ export class Dashboard {
         throw error;
       });
     
-    // Retourner la promesse originale
     return loadDataPromise;
   }
   
@@ -345,18 +312,14 @@ export class Dashboard {
     return this.container;
   }
   
-  // Méthode pour sauvegarder les résultats partiels dans le cache
   private savePartialResult(key: string, value: any): void {
     try {
-      // Récupérer les données existantes du cache
       const cachedData = sessionStorage.getItem('dashboardStats');
       const stats = cachedData ? JSON.parse(cachedData) : {};
       
-      // Mettre à jour la valeur spécifique
       stats[key] = value;
       stats.timestamp = Date.now();
       
-      // Sauvegarder les données mises à jour
       sessionStorage.setItem('dashboardStats', JSON.stringify(stats));
     } catch (error) {
       console.error('Erreur lors de la sauvegarde partielle des données:', error);
@@ -364,10 +327,8 @@ export class Dashboard {
   }
   
   public refreshData(): void {
-    // Supprimer les données du cache
     sessionStorage.removeItem('dashboardStats');
     
-    // Recharger les données avec rafraîchissement forcé
     this.loadCounts(false, true);
   }
 }
