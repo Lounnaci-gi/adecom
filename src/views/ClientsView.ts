@@ -8,8 +8,7 @@ export class ClientsView {
     this.container = document.createElement('div');
     this.container.className = 'clients-view';
     this.render();
-    this.loadCreancesData();
-    this.loadCreancesResiliesData();
+    this.loadAllCreancesData();
     this.setupEventListeners();
   }
 
@@ -146,8 +145,7 @@ export class ClientsView {
     this.updateCreancesResiliesDisplayLoading();
     
     // Recharger les données en forçant le rafraîchissement
-    this.loadCreancesDataForce();
-    this.loadCreancesResiliesDataForce();
+    this.loadAllCreancesDataForce();
   }
 
   private async loadCreancesDataForce(): Promise<void> {
@@ -225,6 +223,132 @@ export class ClientsView {
       console.error('Erreur lors du chargement des créances des abonnés résiliés:', error);
       this.updateCreancesResiliesDisplay(0);
     }
+  }
+
+  private async loadAllCreancesData(): Promise<void> {
+    try {
+      // Charger les deux jeux de données en parallèle et mettre à jour l'affichage dès que chaque requête termine
+      const creancesPromise = this.loadCreancesDataPromise().then(result => {
+        this.updateCreancesDisplay(result);
+        return result;
+      }).catch(error => {
+        console.error('Erreur lors du chargement des créances:', error);
+        this.updateCreancesDisplay(0);
+        return 0;
+      });
+      
+      const creancesResiliesPromise = this.loadCreancesResiliesDataPromise().then(result => {
+        this.updateCreancesResiliesDisplay(result);
+        return result;
+      }).catch(error => {
+        console.error('Erreur lors du chargement des créances résiliées:', error);
+        this.updateCreancesResiliesDisplay(0);
+        return 0;
+      });
+      
+      // Attendre que les deux requêtes soient terminées (pour la gestion des erreurs globale)
+      await Promise.all([creancesPromise, creancesResiliesPromise]);
+    } catch (error) {
+      console.error('Erreur lors du chargement des créances:', error);
+      // Les erreurs individuelles sont déjà gérées dans les promesses
+    }
+  }
+
+  private async loadAllCreancesDataForce(): Promise<void> {
+    try {
+      // Supprimer les données du cache
+      sessionStorage.removeItem('creancesAbonnes');
+      sessionStorage.removeItem('creancesResilies');
+      
+      // Charger les deux jeux de données en parallèle en forçant le rafraîchissement et mettre à jour l'affichage dès que chaque requête termine
+      const creancesPromise = DbfService.getAbonnesCreances(true).then(async result => {
+        // Sauvegarder dans le sessionStorage
+        const cacheData = {
+          value: result,
+          timestamp: Date.now()
+        };
+        sessionStorage.setItem('creancesAbonnes', JSON.stringify(cacheData));
+        
+        // Mettre à jour l'affichage
+        this.updateCreancesDisplay(result);
+        return result;
+      }).catch(error => {
+        console.error('Erreur lors du chargement des créances:', error);
+        this.updateCreancesDisplay(0);
+        return 0;
+      });
+      
+      const creancesResiliesPromise = DbfService.getAbonnesCreancesResilies(true).then(async result => {
+        // Sauvegarder dans le sessionStorage
+        const cacheData = {
+          value: result,
+          timestamp: Date.now()
+        };
+        sessionStorage.setItem('creancesResilies', JSON.stringify(cacheData));
+        
+        // Mettre à jour l'affichage
+        this.updateCreancesResiliesDisplay(result);
+        return result;
+      }).catch(error => {
+        console.error('Erreur lors du chargement des créances résiliées:', error);
+        this.updateCreancesResiliesDisplay(0);
+        return 0;
+      });
+      
+      // Attendre que les deux requêtes soient terminées (pour la gestion des erreurs globale)
+      await Promise.all([creancesPromise, creancesResiliesPromise]);
+    } catch (error) {
+      console.error('Erreur lors du chargement des créances:', error);
+      // Les erreurs individuelles sont déjà gérées dans les promesses
+    }
+  }
+
+  private async loadCreancesDataPromise(): Promise<number> {
+    // Vérifier si les données sont dans le sessionStorage
+    const cachedData = sessionStorage.getItem('creancesAbonnes');
+    if (cachedData) {
+      const data = JSON.parse(cachedData);
+      // Vérifier si les données ne sont pas expirées (5 minutes)
+      if (Date.now() - data.timestamp < 5 * 60 * 1000) {
+        return data.value;
+      }
+    }
+
+    // Charger les données depuis le service
+    const creances = await DbfService.getAbonnesCreances();
+    
+    // Sauvegarder dans le sessionStorage
+    const cacheData = {
+      value: creances,
+      timestamp: Date.now()
+    };
+    sessionStorage.setItem('creancesAbonnes', JSON.stringify(cacheData));
+    
+    return creances;
+  }
+
+  private async loadCreancesResiliesDataPromise(): Promise<number> {
+    // Vérifier si les données sont dans le sessionStorage
+    const cachedData = sessionStorage.getItem('creancesResilies');
+    if (cachedData) {
+      const data = JSON.parse(cachedData);
+      // Vérifier si les données ne sont pas expirées (5 minutes)
+      if (Date.now() - data.timestamp < 5 * 60 * 1000) {
+        return data.value;
+      }
+    }
+
+    // Charger les données depuis le service
+    const creancesResilies = await DbfService.getAbonnesCreancesResilies();
+    
+    // Sauvegarder dans le sessionStorage
+    const cacheData = {
+      value: creancesResilies,
+      timestamp: Date.now()
+    };
+    sessionStorage.setItem('creancesResilies', JSON.stringify(cacheData));
+    
+    return creancesResilies;
   }
 
   private updateCreancesDisplayLoading(): void {
