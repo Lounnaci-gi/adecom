@@ -33,13 +33,17 @@ export class ClientsView {
 
         
         <div class="stat-card">
-          <h3>Créances Abonnés</h3>
-          <p class="stat-value" id="creances-value">Chargement...</p>
+          <h3>Créances Total</h3>
+          <p class="stat-value" id="creances-value">
+            <span class="loading-spinner"></span>
+          </p>
         </div>
         
         <div class="stat-card">
-          <h3>Créances Abonnés Résiliés</h3>
-          <p class="stat-value" id="creances-resilies-value">Chargement...</p>
+          <h3>Créances Total Résiliés</h3>
+          <p class="stat-value" id="creances-resilies-value">
+            <span class="loading-spinner"></span>
+          </p>
         </div>
       </div>
       
@@ -354,7 +358,7 @@ export class ClientsView {
   private updateCreancesDisplayLoading(): void {
     const creancesElement = this.container.querySelector('#creances-value');
     if (creancesElement) {
-      creancesElement.textContent = 'Chargement...';
+      creancesElement.innerHTML = '<span class="loading-spinner"></span>';
     }
   }
 
@@ -373,7 +377,7 @@ export class ClientsView {
   private updateCreancesResiliesDisplayLoading(): void {
     const creancesResiliesElement = this.container.querySelector('#creances-resilies-value');
     if (creancesResiliesElement) {
-      creancesResiliesElement.textContent = 'Chargement...';
+      creancesResiliesElement.innerHTML = '<span class="loading-spinner"></span>';
     }
   }
 
