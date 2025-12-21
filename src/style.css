@@ -704,23 +704,7 @@ tr:hover {
   font-weight: 600;
 }
 
-.refresh-btn {
-  color: var(--text-main);
-  text-decoration: none;
-  font-weight: 500;
-  transition: color 0.2s ease;
-  padding: 0.25rem 0.625rem;
-  border-radius: 4px;
-  font-size: 0.8rem;
-  background: transparent;
-  border: none;
-  cursor: pointer;
-}
 
-.refresh-btn:hover {
-  color: var(--primary);
-  background-color: transparent;
-}
 
 
 

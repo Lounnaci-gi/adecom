@@ -33,7 +33,7 @@ export class Navbar {
             <a href="#" class="navbar-link" data-view="settings">Paramètres</a>
           </li>
           <li class="navbar-item">
-            <button id="refresh-btn" class="navbar-link refresh-btn" aria-label="Refresh data">Actualiser</button>
+            <a href="#" class="navbar-link" data-view="refresh" id="refresh-btn" aria-label="Refresh data">Actualiser</a>
           </li>
           <li class="navbar-item theme-toggle">
             <button id="theme-toggle" class="theme-toggle-btn" aria-label="Toggle theme">
@@ -50,7 +50,11 @@ export class Navbar {
       link.addEventListener('click', (e) => {
         e.preventDefault();
         const view = (e.target as HTMLElement).getAttribute('data-view');
-        if (view) {
+        if (view === 'refresh') {
+          // Dispatcher un événement personnalisé pour rafraîchir les données
+          const event = new CustomEvent('refreshData');
+          window.dispatchEvent(event);
+        } else if (view) {
           // Dispatcher un événement personnalisé pour changer de vue
           const event = new CustomEvent('navigate', { detail: { view } });
           window.dispatchEvent(event);
@@ -79,13 +83,7 @@ export class Navbar {
       navbarToggle?.classList.toggle('active');
     });
     
-    // Gestion du bouton de rafraîchissement
-    const refreshBtn = this.container.querySelector('#refresh-btn');
-    refreshBtn?.addEventListener('click', () => {
-      // Dispatcher un événement personnalisé pour rafraîchir les données
-      const event = new CustomEvent('refreshData');
-      window.dispatchEvent(event);
-    });
+
   }
   
   // Méthode d'initialisation appelée après que l'élément soit ajouté au DOM

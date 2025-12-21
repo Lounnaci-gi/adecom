@@ -19,6 +19,7 @@ interface ServerCache<T> {
 }
 
 let creancesCache: ServerCache<number> | null = null;
+let creancesResiliesCache: ServerCache<number> | null = null;
 let centresCountCache: ServerCache<number> | null = null;
 let abonnesCountCache: ServerCache<number> | null = null;
 let abonnesCountByTypeCache: ServerCache<any> | null = null;
@@ -1102,6 +1103,67 @@ app.get('/api/abonnes/creances', async (req, res) => {
     console.error('Erreur lors du calcul des créances:', error);
     res.status(500).json({ 
       error: 'Erreur serveur lors du calcul des créances',
+      message: (error as Error).message
+    });
+  }
+});
+
+// API endpoint pour récupérer les créances des abonnés résiliés
+app.get('/api/abonnes/creances-resilies', async (req, res) => {
+  try {
+    const forceRefresh = req.query.refresh === 'true';
+    
+    if (!forceRefresh && creancesResiliesCache) {
+      if (Date.now() - creancesResiliesCache.timestamp < CACHE_DURATION) {
+        return res.json({
+          totalCreancesResilies: creancesResiliesCache.data,
+          executionTime: 0,
+          rowCount: 1,
+          fromCache: true,
+          cacheAge: Math.floor((Date.now() - creancesResiliesCache.timestamp) / 1000)
+        });
+      }
+    }
+    
+    const startTime = Date.now();
+    
+    // Utiliser une approche plus simple et efficace
+    // 1. Obtenir tous les abonnés résiliés
+    const abonnesResiliesQuery = `SELECT NUMAB FROM ABONMENT WHERE ETATCPT = '40'`;
+    const abonnesResiliesResult = await dbfSqlService.executeSelectQuery(abonnesResiliesQuery);
+    
+    // 2. Créer un ensemble pour une recherche rapide
+    const abonnesResiliesSet = new Set(abonnesResiliesResult.rows.map((abonne: any) => abonne.NUMAB));
+    
+    // 3. Obtenir toutes les factures impayées
+    const facturesQuery = `SELECT NUMAB, MONTTC FROM FACTURES WHERE PAIEMENT = 'T'`;
+    const facturesResult = await dbfSqlService.executeSelectQuery(facturesQuery);
+    
+    // 4. Calculer la somme des créances pour les abonnés résiliés
+    let totalCreancesResilies = 0;
+    for (const facture of facturesResult.rows) {
+      if (abonnesResiliesSet.has(facture.NUMAB)) {
+        totalCreancesResilies += parseFloat(facture.MONTTC) || 0;
+      }
+    }
+    
+    const executionTime = Date.now() - startTime;
+    
+    creancesResiliesCache = {
+      data: parseFloat(totalCreancesResilies.toFixed(2)),
+      timestamp: Date.now()
+    };
+    
+    res.json({
+      totalCreancesResilies: parseFloat(totalCreancesResilies.toFixed(2)),
+      executionTime: executionTime,
+      rowCount: 1,
+      fromCache: forceRefresh ? false : (creancesResiliesCache ? true : false)
+    });
+  } catch (error) {
+    console.error('Erreur lors du calcul des créances des abonnés résiliés:', error);
+    res.status(500).json({ 
+      error: 'Erreur serveur lors du calcul des créances des abonnés résiliés',
       message: (error as Error).message
     });
   }

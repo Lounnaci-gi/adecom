@@ -1,5 +1,5 @@
 // dbfService.ts
-import { getDbfFiles, getCentresCount, getAbonnesCount, getAbonnesCountByType, getAbonnesCompteurArret, getAbonnesSansCompteur, updateDbfPath, getDbfPath, getCentresList, saveCentreToEnv, getAbonnesCreances, refreshServerCache } from '../api';
+import { getDbfFiles, getCentresCount, getAbonnesCount, getAbonnesCountByType, getAbonnesCompteurArret, getAbonnesSansCompteur, updateDbfPath, getDbfPath, getCentresList, saveCentreToEnv, getAbonnesCreances, getAbonnesCreancesResilies, refreshServerCache } from '../api';
 import { dbfConfig } from '../database/dbfConnection';
 
 /**
@@ -277,6 +277,21 @@ export class DbfService {
       return result.totalCreances || 0;
     } catch (error) {
       console.error('Erreur lors de la récupération des créances des abonnés:', error);
+      // Retourner 0 en cas d'erreur
+      return 0;
+    }
+  }
+
+  /**
+   * Récupère la somme des créances des abonnés résiliés
+   * @param forceRefresh Force le rafraîchissement des données
+   */
+  static async getAbonnesCreancesResilies(forceRefresh: boolean = false): Promise<number> {
+    try {
+      const result = await getAbonnesCreancesResilies(forceRefresh);
+      return result.totalCreancesResilies || 0;
+    } catch (error) {
+      console.error('Erreur lors de la récupération des créances des abonnés résiliés:', error);
       // Retourner 0 en cas d'erreur
       return 0;
     }
