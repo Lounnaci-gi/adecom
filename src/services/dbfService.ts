@@ -1,5 +1,5 @@
 // dbfService.ts
-import { getDbfFiles, getCentresCount, getAbonnesCount, getAbonnesCountByType, getAbonnesCompteurArret, getAbonnesSansCompteur, updateDbfPath, getDbfPath, getCentresList, saveCentreToEnv, getAbonnesCreances, getAbonnesCreancesResilies, refreshServerCache } from '../api';
+import { getDbfFiles, getCentresCount, getAbonnesCount, getAbonnesCountByType, getAbonnesCompteurArret, getAbonnesSansCompteur, updateDbfPath, getDbfPath, getCentresList, saveCentreToEnv, getAbonnesCreances, getAbonnesCreancesResilies, getAbonnesCreancesEau, refreshServerCache } from '../api';
 import { dbfConfig } from '../database/dbfConnection';
 
 /**
@@ -292,6 +292,21 @@ export class DbfService {
       return result.totalCreancesResilies || 0;
     } catch (error) {
       console.error('Erreur lors de la récupération des créances des abonnés résiliés:', error);
+      // Retourner 0 en cas d'erreur
+      return 0;
+    }
+  }
+
+  /**
+   * Récupère la somme des créances d'eau
+   * @param forceRefresh Force le rafraîchissement des données
+   */
+  static async getAbonnesCreancesEau(forceRefresh: boolean = false): Promise<number> {
+    try {
+      const result = await getAbonnesCreancesEau(forceRefresh);
+      return result.totalCreancesEau || 0;
+    } catch (error) {
+      console.error('Erreur lors de la récupération des créances d\'eau:', error);
       // Retourner 0 en cas d'erreur
       return 0;
     }

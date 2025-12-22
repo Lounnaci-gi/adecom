@@ -20,6 +20,7 @@ interface ServerCache<T> {
 
 let creancesCache: ServerCache<number> | null = null;
 let creancesResiliesCache: ServerCache<number> | null = null;
+let creancesEauCache: ServerCache<number> | null = null;
 let centresCountCache: ServerCache<number> | null = null;
 let abonnesCountCache: ServerCache<number> | null = null;
 let abonnesCountByTypeCache: ServerCache<any> | null = null;
@@ -1164,6 +1165,56 @@ app.get('/api/abonnes/creances-resilies', async (req, res) => {
     console.error('Erreur lors du calcul des créances des abonnés résiliés:', error);
     res.status(500).json({ 
       error: 'Erreur serveur lors du calcul des créances des abonnés résiliés',
+      message: (error as Error).message
+    });
+  }
+});
+
+// API endpoint pour récupérer les créances d'eau
+app.get('/api/abonnes/creances-eau', async (req, res) => {
+  try {
+    const forceRefresh = req.query.refresh === 'true';
+    
+    if (!forceRefresh && creancesEauCache) {
+      if (Date.now() - creancesEauCache.timestamp < CACHE_DURATION) {
+        return res.json({
+          totalCreancesEau: creancesEauCache.data,
+          executionTime: 0,
+          rowCount: 1,
+          fromCache: true,
+          cacheAge: Math.floor((Date.now() - creancesEauCache.timestamp) / 1000)
+        });
+      }
+    }
+    
+    const startTime = Date.now();
+    
+    // Requête pour obtenir la somme des créances d'eau
+    const sqlQuery = `SELECT SUM(MONTTC) AS Sum_MONTTC FROM FACTURES WHERE PAIEMENT = 'T' AND TYPE = 'E' GROUP BY PAIEMENT, TYPE`;
+    const result = await dbfSqlService.executeSelectQuery(sqlQuery);
+    
+    let totalCreancesEau = 0;
+    if (result.rows.length > 0) {
+      totalCreancesEau = result.rows[0].Sum_MONTTC || result.rows[0].sum_MONTTC || result.rows[0].MONTTC || 0;
+    }
+    
+    const executionTime = Date.now() - startTime;
+    
+    creancesEauCache = {
+      data: parseFloat(totalCreancesEau.toFixed(2)),
+      timestamp: Date.now()
+    };
+    
+    res.json({
+      totalCreancesEau: parseFloat(totalCreancesEau.toFixed(2)),
+      executionTime: executionTime,
+      rowCount: result.count,
+      fromCache: forceRefresh ? false : (creancesEauCache ? true : false)
+    });
+  } catch (error) {
+    console.error('Erreur lors du calcul des créances d\'eau:', error);
+    res.status(500).json({ 
+      error: 'Erreur serveur lors du calcul des créances d\'eau',
       message: (error as Error).message
     });
   }

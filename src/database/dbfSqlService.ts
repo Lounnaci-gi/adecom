@@ -226,14 +226,31 @@ export class DbfSqlService {
    * Applique un filtre WHERE aux enregistrements
    */
   private applyWhereFilter(records: any[], whereClause: string): any[] {
-    const equalsMatch = whereClause.match(/(\w+)\s*=\s*['"](.+?)['"]/i);
+    // Gérer les conditions AND multiples
+    if (whereClause.includes(' AND ')) {
+      const conditions = whereClause.split(' AND ').map(cond => cond.trim());
+      let filteredRecords = records;
+      
+      for (const condition of conditions) {
+        filteredRecords = this.applySingleWhereCondition(filteredRecords, condition);
+      }
+      
+      return filteredRecords;
+    }
+    
+    // Gérer une seule condition
+    return this.applySingleWhereCondition(records, whereClause);
+  }
+  
+  private applySingleWhereCondition(records: any[], condition: string): any[] {
+    const equalsMatch = condition.match(/(\w+)\s*=\s*['"](.+?)['"]/i);
     if (equalsMatch) {
       const field = equalsMatch[1];
       const value = equalsMatch[2];
       return records.filter(record => record[field] === value);
     }
     
-    const operatorMatch = whereClause.match(/(\w+)\s*(>=|<=|>|<|<>)\s*['"]?(.+?)['"]?/i);
+    const operatorMatch = condition.match(/(\w+)\s*(>=|<=|>|<|<>)\s*['"]?(.+?)['"]?/i);
     if (operatorMatch) {
       const field = operatorMatch[1];
       const operator = operatorMatch[2];
@@ -252,7 +269,7 @@ export class DbfSqlService {
       });
     }
     
-    console.warn('Clause WHERE non reconnue, retour de tous les enregistrements:', whereClause);
+    console.warn('Condition WHERE non reconnue, retour de tous les enregistrements:', condition);
     return records;
   }
 
