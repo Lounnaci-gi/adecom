@@ -258,6 +258,22 @@ export class DbfSqlService {
       });
     }
     
+    // Gérer l'opérateur != (différent de)
+    const notEqualsMatch = condition.match(/(\w+)\s*<>\s*['"](.+?)['"]/i);
+    if (notEqualsMatch) {
+      const field = notEqualsMatch[1];
+      const value = notEqualsMatch[2];
+      return records.filter(record => record[field] !== value);
+    }
+    
+    // Gérer l'opérateur != (différent de) - alternative
+    const notEqualsMatch2 = condition.match(/(\w+)\s*!=\s*['"](.+?)['"]/i);
+    if (notEqualsMatch2) {
+      const field = notEqualsMatch2[1];
+      const value = notEqualsMatch2[2];
+      return records.filter(record => record[field] !== value);
+    }
+    
     const equalsMatch = condition.match(/(\w+)\s*=\s*['"](.+?)['"]/i);
     if (equalsMatch) {
       const field = equalsMatch[1];
@@ -265,7 +281,7 @@ export class DbfSqlService {
       return records.filter(record => record[field] === value);
     }
     
-    const operatorMatch = condition.match(/(\w+)\s*(>=|<=|>|<|<>)\s*['"]?(.+?)['"]?/i);
+    const operatorMatch = condition.match(/(\w+)\s*(>=|<=|>|<)\s*['"]?(.+?)['"]?/i);
     if (operatorMatch) {
       const field = operatorMatch[1];
       const operator = operatorMatch[2];
@@ -278,7 +294,6 @@ export class DbfSqlService {
           case '<': return recordValue < value;
           case '>=': return recordValue >= value;
           case '<=': return recordValue <= value;
-          case '<>': return recordValue !== value;
           default: return recordValue === value;
         }
       });

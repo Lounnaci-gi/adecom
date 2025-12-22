@@ -1243,11 +1243,30 @@ app.get('/api/abonnes/creances-par-categorie', async (req, res) => {
     const startTime = Date.now();
     
     // Requêtes pour obtenir les créances par catégorie
-    const categories = ['2', '3', '4'];
+    const categories = ['1', '2', '3', '4'];
     const creancesParCategorie = [];
     
+    // Ajout d'une requête spécifique pour TYPABON = '15'
+    const sqlQuery15 = `SELECT SUM(MONTTC) AS Sum_MONTTC FROM FACTURES WHERE TYPABON = '15' GROUP BY TYPABON`;
+    const result15 = await dbfSqlService.executeSelectQuery(sqlQuery15);
+    
+    if (result15.rows.length > 0) {
+      creancesParCategorie.push({
+        categorie: '15',
+        montant: result15.rows[0].Sum_MONTTC || result15.rows[0].sum_MONTTC || result15.rows[0].MONTTC || 0
+      });
+    }
+    
     for (const categorie of categories) {
-      const sqlQuery = `SELECT SUM(MONTTC) AS Sum_MONTTC FROM FACTURES WHERE Left(TYPABON, 1) = '${categorie}' GROUP BY Left(TYPABON, 1)`;
+      let sqlQuery;
+      
+      // Pour la catégorie '1', exclure TYPABON = '17'
+      if (categorie === '1') {
+        sqlQuery = `SELECT SUM(MONTTC) AS Sum_MONTTC FROM FACTURES WHERE Left(TYPABON, 1) = '1' AND TYPABON != '15' GROUP BY Left(TYPABON, 1)`;
+      } else {
+        sqlQuery = `SELECT SUM(MONTTC) AS Sum_MONTTC FROM FACTURES WHERE Left(TYPABON, 1) = '${categorie}' GROUP BY Left(TYPABON, 1)`;
+      }
+      
       const result = await dbfSqlService.executeSelectQuery(sqlQuery);
       
       if (result.rows.length > 0) {
