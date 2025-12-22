@@ -743,6 +743,8 @@ app.get('/api/abonnes/sans-compteur', (req, res) => {
 app.post('/api/cache/refresh', (req, res) => {
   try {
     creancesCache = null;
+    creancesResiliesCache = null;
+    creancesEauCache = null;
     centresCountCache = null;
     abonnesCountCache = null;
     abonnesCountByTypeCache = null;
