@@ -48,11 +48,7 @@ export class ClientsView {
         </div>
         
         <div class="stat-card">
-<<<<<<< HEAD
           <h3>Créance Total Eau</h3>
-=======
-          <h3>Créances Eau</h3>
->>>>>>> 95d2ce07f0195d728544691dbb11b68eb607f50f
           <p class="stat-value" id="creances-eau-value">
             <span class="loading-spinner"></span>
           </p>
@@ -320,11 +316,7 @@ export class ClientsView {
         this.updateCreancesEauDisplay(result);
         return result;
       }).catch(error => {
-<<<<<<< HEAD
         console.error('Erreur lors du chargement des créances d\'eau:', error);
-=======
-        console.error('Erreur lors du chargement des créances Eau:', error);
->>>>>>> 95d2ce07f0195d728544691dbb11b68eb607f50f
         this.updateCreancesEauDisplay(0);
         return 0;
       });
@@ -388,17 +380,10 @@ export class ClientsView {
         sessionStorage.setItem('creancesEau', JSON.stringify(cacheData));
         
         // Mettre à jour l'affichage
-<<<<<<< HEAD
         this.updateCreancesEauDisplay(result.totalCreancesEau || 0);
         return result;
       }).catch(error => {
         console.error('Erreur lors du chargement des créances d\'eau:', error);
-=======
-        this.updateCreancesEauDisplay(result);
-        return result;
-      }).catch(error => {
-        console.error('Erreur lors du chargement des créances Eau:', error);
->>>>>>> 95d2ce07f0195d728544691dbb11b68eb607f50f
         this.updateCreancesEauDisplay(0);
         return 0;
       });
