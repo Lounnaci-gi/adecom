@@ -1,5 +1,5 @@
 // dbfService.ts
-import { getDbfFiles, getCentresCount, getAbonnesCount, getAbonnesCountByType, getAbonnesCompteurArret, getAbonnesSansCompteur, updateDbfPath, getDbfPath, getCentresList, saveCentreToEnv, getAbonnesCreances, getAbonnesCreancesResilies, getAbonnesCreancesEau, refreshServerCache } from '../api';
+import { getDbfFiles, getCentresCount, getAbonnesCount, getAbonnesCountByType, getAbonnesCompteurArret, getAbonnesSansCompteur, updateDbfPath, getDbfPath, getCentresList, saveCentreToEnv, getAbonnesCreances, getAbonnesCreancesResilies, getAbonnesCreancesEau, getAbonnesCreancesParCategorie, refreshServerCache } from '../api';
 import { dbfConfig } from '../database/dbfConnection';
 
 /**
@@ -309,6 +309,21 @@ export class DbfService {
       console.error('Erreur lors de la récupération des créances d\'eau:', error);
       // Retourner 0 en cas d'erreur
       return 0;
+    }
+  }
+
+  /**
+   * Récupère les créances par catégorie
+   * @param forceRefresh Force le rafraîchissement des données
+   */
+  static async getAbonnesCreancesParCategorie(forceRefresh: boolean = false): Promise<any[]> {
+    try {
+      const result = await getAbonnesCreancesParCategorie(forceRefresh);
+      return result.creancesParCategorie || [];
+    } catch (error) {
+      console.error('Erreur lors de la récupération des créances par catégorie:', error);
+      // Retourner un tableau vide en cas d'erreur
+      return [];
     }
   }
 

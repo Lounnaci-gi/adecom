@@ -174,7 +174,7 @@ export class Dashboard {
     if (creancesCard) {
       creancesCard.innerHTML = `
         <h3>Portefeuille Abonnés</h3>
-        <p class="stat-value">${this.creancesCount.toLocaleString('fr-FR', { style: 'currency', currency: 'DZD' })}</p>
+        <p class="stat-value">${this.formatCurrency(this.creancesCount)}</p>
         <p class="stat-change positive">Créances non réglées</p>
       `;
     }
@@ -196,6 +196,17 @@ export class Dashboard {
         statChange.offsetHeight;
       }
     }
+  }
+
+  private formatCurrency(amount: number): string {
+    // Formater le montant avec des espaces comme séparateurs de milliers
+    const formattedAmount = amount.toLocaleString('fr-FR', { 
+      minimumFractionDigits: 2, 
+      maximumFractionDigits: 2 
+    });
+    
+    // Retourner le montant avec le symbole DZD en petit
+    return `${formattedAmount} <span class="currency-symbol">DZD</span>`;
   }
 
   private render(): void {

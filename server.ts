@@ -21,6 +21,7 @@ interface ServerCache<T> {
 let creancesCache: ServerCache<number> | null = null;
 let creancesResiliesCache: ServerCache<number> | null = null;
 let creancesEauCache: ServerCache<number> | null = null;
+let creancesParCategorieCache: ServerCache<any> | null = null;
 let centresCountCache: ServerCache<number> | null = null;
 let abonnesCountCache: ServerCache<number> | null = null;
 let abonnesCountByTypeCache: ServerCache<any> | null = null;
@@ -1217,6 +1218,63 @@ app.get('/api/abonnes/creances-eau', async (req, res) => {
     console.error('Erreur lors du calcul des créances d\'eau:', error);
     res.status(500).json({ 
       error: 'Erreur serveur lors du calcul des créances d\'eau',
+      message: (error as Error).message
+    });
+  }
+});
+
+// API endpoint pour récupérer les créances par catégorie
+app.get('/api/abonnes/creances-par-categorie', async (req, res) => {
+  try {
+    const forceRefresh = req.query.refresh === 'true';
+    
+    if (!forceRefresh && creancesParCategorieCache) {
+      if (Date.now() - creancesParCategorieCache.timestamp < CACHE_DURATION) {
+        return res.json({
+          creancesParCategorie: creancesParCategorieCache.data,
+          executionTime: 0,
+          rowCount: creancesParCategorieCache.data.length,
+          fromCache: true,
+          cacheAge: Math.floor((Date.now() - creancesParCategorieCache.timestamp) / 1000)
+        });
+      }
+    }
+    
+    const startTime = Date.now();
+    
+    // Requêtes pour obtenir les créances par catégorie
+    const categories = ['2', '3', '4'];
+    const creancesParCategorie = [];
+    
+    for (const categorie of categories) {
+      const sqlQuery = `SELECT SUM(MONTTC) AS Sum_MONTTC FROM FACTURES WHERE Left(TYPABON, 1) = '${categorie}' GROUP BY Left(TYPABON, 1)`;
+      const result = await dbfSqlService.executeSelectQuery(sqlQuery);
+      
+      if (result.rows.length > 0) {
+        creancesParCategorie.push({
+          categorie: categorie,
+          montant: result.rows[0].Sum_MONTTC || result.rows[0].sum_MONTTC || result.rows[0].MONTTC || 0
+        });
+      }
+    }
+    
+    const executionTime = Date.now() - startTime;
+    
+    creancesParCategorieCache = {
+      data: creancesParCategorie,
+      timestamp: Date.now()
+    };
+    
+    res.json({
+      creancesParCategorie: creancesParCategorie,
+      executionTime: executionTime,
+      rowCount: creancesParCategorie.length,
+      fromCache: forceRefresh ? false : (creancesParCategorieCache ? true : false)
+    });
+  } catch (error) {
+    console.error('Erreur lors du calcul des créances par catégorie:', error);
+    res.status(500).json({ 
+      error: 'Erreur serveur lors du calcul des créances par catégorie',
       message: (error as Error).message
     });
   }

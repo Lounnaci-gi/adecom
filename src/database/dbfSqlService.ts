@@ -243,6 +243,21 @@ export class DbfSqlService {
   }
   
   private applySingleWhereCondition(records: any[], condition: string): any[] {
+    // Gérer les fonctions LEFT
+    const leftMatch = condition.match(/Left\s*\(\s*(\w+)\s*,\s*(\d+)\s*\)\s*=\s*['"](.+?)['"]/i);
+    if (leftMatch) {
+      const field = leftMatch[1];
+      const length = parseInt(leftMatch[2]);
+      const value = leftMatch[3];
+      return records.filter(record => {
+        const fieldValue = record[field];
+        if (typeof fieldValue === 'string') {
+          return fieldValue.substring(0, length) === value;
+        }
+        return false;
+      });
+    }
+    
     const equalsMatch = condition.match(/(\w+)\s*=\s*['"](.+?)['"]/i);
     if (equalsMatch) {
       const field = equalsMatch[1];

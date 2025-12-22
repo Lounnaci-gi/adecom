@@ -818,6 +818,11 @@ tr:hover {
   justify-content: center;
 }
 
+.stat-value .currency-symbol {
+  font-size: 0.7em;
+  vertical-align: super;
+}
+
 .stat-change {
   margin: 0;
   font-size: clamp(0.6rem, 1.5vw, 0.7rem);
@@ -1250,17 +1255,22 @@ tr:hover {
   padding: 1rem;
 }
 
-.pie-chart-container {
+.pie-chart-container, .bar-chart-container {
   display: flex;
   justify-content: center;
   margin: 1rem 0;
 }
 
-.pie-chart {
+.pie-chart, .bar-chart {
   position: relative;
   width: 200px;
   height: 200px;
   margin: 0 auto;
+}
+
+.bar-chart {
+  width: 300px;
+  height: 200px;
 }
 
 .pie-segment {
@@ -1835,8 +1845,13 @@ tr:hover {
     grid-template-columns: 1fr;
   }
   
-  .pie-chart {
+  .pie-chart, .bar-chart {
     width: 150px;
+    height: 150px;
+  }
+  
+  .bar-chart {
+    width: 250px;
     height: 150px;
   }
   
@@ -1914,8 +1929,13 @@ tr:hover {
     padding: 1rem;
   }
   
-  .pie-chart {
+  .pie-chart, .bar-chart {
     width: 120px;
+    height: 120px;
+  }
+  
+  .bar-chart {
+    width: 200px;
     height: 120px;
   }
   

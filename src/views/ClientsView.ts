@@ -55,49 +55,25 @@ export class ClientsView {
         </div>
       </div>
       
-      <div class="clients-actions">
-        <button class="btn btn-primary">Nouvel Abonné</button>
-        <button class="btn btn-secondary">Importer Abonnés</button>
-      </div>
-      
       <div class="clients-table-container">
-        <table class="clients-table">
+        <h3>Créances par Catégorie</h3>
+        <table class="clients-table" id="creances-categorie-table">
           <thead>
             <tr>
-              <th>Code</th>
-              <th>Nom</th>
-              <th>Type</th>
-              <th>Téléphone</th>
-              <th>Email</th>
-              <th>Actions</th>
+              <th>Catégorie</th>
+              <th>Montant</th>
             </tr>
           </thead>
           <tbody>
             <tr>
-              <td>A001</td>
-              <td>Entreprise ABC</td>
-              <td>Professionnel</td>
-              <td>01 23 45 67 89</td>
-              <td>contact@abc.com</td>
-              <td>
-                <button class="btn btn-small btn-secondary">Modifier</button>
-                <button class="btn btn-small btn-danger">Supprimer</button>
-              </td>
-            </tr>
-            <tr>
-              <td>A002</td>
-              <td>M. Dupont</td>
-              <td>Particulier</td>
-              <td>06 12 34 56 78</td>
-              <td>dupont@email.com</td>
-              <td>
-                <button class="btn btn-small btn-secondary">Modifier</button>
-                <button class="btn btn-small btn-danger">Supprimer</button>
+              <td colspan="2" class="text-center">
+                <span class="loading-spinner"></span>
               </td>
             </tr>
           </tbody>
         </table>
       </div>
+
     `;
   }
 
@@ -135,12 +111,7 @@ export class ClientsView {
   private updateCreancesDisplay(value: number): void {
     const creancesElement = this.container.querySelector('#creances-value');
     if (creancesElement) {
-      creancesElement.textContent = value.toLocaleString('fr-FR', { 
-        style: 'currency', 
-        currency: 'DZD',
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2
-      });
+      creancesElement.innerHTML = this.formatCurrency(value);
     }
   }
 
@@ -321,6 +292,9 @@ export class ClientsView {
         return 0;
       });
       
+      // Charger les créances par catégorie
+      this.loadCreancesParCategorie();
+      
       // Attendre que les trois requêtes soient terminées (pour la gestion des erreurs globale)
       await Promise.all([creancesPromise, creancesResiliesPromise, creancesEauPromise]);
     } catch (error) {
@@ -478,12 +452,7 @@ export class ClientsView {
   private updateCreancesResiliesDisplay(value: number): void {
     const creancesResiliesElement = this.container.querySelector('#creances-resilies-value');
     if (creancesResiliesElement) {
-      creancesResiliesElement.textContent = value.toLocaleString('fr-FR', { 
-        style: 'currency', 
-        currency: 'DZD',
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2
-      });
+      creancesResiliesElement.innerHTML = this.formatCurrency(value);
     }
   }
 
@@ -497,12 +466,7 @@ export class ClientsView {
   private updateCreancesEauDisplay(value: number): void {
     const creancesEauElement = this.container.querySelector('#creances-eau-value');
     if (creancesEauElement) {
-      creancesEauElement.textContent = value.toLocaleString('fr-FR', { 
-        style: 'currency', 
-        currency: 'DZD',
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2
-      });
+      creancesEauElement.innerHTML = this.formatCurrency(value);
     }
   }
   
@@ -513,47 +477,54 @@ export class ClientsView {
     }
   }
 
-  private async loadCreancesEauDataPromise(): Promise<number> {
-    // Vérifier si les données sont dans le sessionStorage
-    const cachedData = sessionStorage.getItem('creancesEau');
-    if (cachedData) {
-      const data = JSON.parse(cachedData);
-      // Vérifier si les données ne sont pas expirées (5 minutes)
-      if (Date.now() - data.timestamp < 5 * 60 * 1000) {
-        return data.value;
+  private async loadCreancesParCategorie(): Promise<void> {
+    try {
+      const creancesParCategorie = await DbfService.getAbonnesCreancesParCategorie();
+      this.updateCreancesParCategorieDisplay(creancesParCategorie);
+    } catch (error) {
+      console.error('Erreur lors du chargement des créances par catégorie:', error);
+      this.updateCreancesParCategorieDisplay([]);
+    }
+  }
+
+  private updateCreancesParCategorieDisplay(creances: any[]): void {
+    const tableBody = this.container.querySelector('#creances-categorie-table tbody');
+    if (tableBody) {
+      if (creances.length === 0) {
+        tableBody.innerHTML = `
+          <tr>
+            <td colspan="2" class="text-center">Aucune donnée disponible</td>
+          </tr>
+        `;
+      } else {
+        let rows = '';
+        creances.forEach(item => {
+          rows += `
+            <tr>
+              <td>${item.categorie}</td>
+              <td>${parseFloat(item.montant).toLocaleString('fr-FR', { 
+                style: 'currency', 
+                currency: 'DZD',
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+              })}</td>
+            </tr>
+          `;
+        });
+        tableBody.innerHTML = rows;
       }
     }
-
-    // Charger les données depuis le service
-    const creancesEau = await DbfService.getAbonnesCreancesEau();
-    
-    // Sauvegarder dans le sessionStorage
-    const cacheData = {
-      value: creancesEau,
-      timestamp: Date.now()
-    };
-    sessionStorage.setItem('creancesEau', JSON.stringify(cacheData));
-    
-    return creancesEau;
   }
 
-  private updateCreancesEauDisplay(value: number): void {
-    const creancesEauElement = this.container.querySelector('#creances-eau-value');
-    if (creancesEauElement) {
-      creancesEauElement.textContent = value.toLocaleString('fr-FR', { 
-        style: 'currency', 
-        currency: 'DZD',
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2
-      });
-    }
-  }
-
-  private updateCreancesEauDisplayLoading(): void {
-    const creancesEauElement = this.container.querySelector('#creances-eau-value');
-    if (creancesEauElement) {
-      creancesEauElement.innerHTML = '<span class="loading-spinner"></span>';
-    }
+  private formatCurrency(amount: number): string {
+    // Formater le montant avec des espaces comme séparateurs de milliers
+    const formattedAmount = amount.toLocaleString('fr-FR', { 
+      minimumFractionDigits: 2, 
+      maximumFractionDigits: 2 
+    });
+    
+    // Retourner le montant avec le symbole DZD en petit
+    return `${formattedAmount} <span class="currency-symbol">DZD</span>`;
   }
 
   public getElement(): HTMLElement {

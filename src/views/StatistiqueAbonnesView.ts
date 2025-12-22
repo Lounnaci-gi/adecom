@@ -86,52 +86,58 @@ export class StatistiqueAbonnesView {
     const tauxCompteurArret = this.totalCount > 0 ? ((this.compteurArretCount / this.totalCount) * 100).toFixed(1) : '0';
     const tauxSansCompteur = this.totalCount > 0 ? ((this.sansCompteurCount / this.totalCount) * 100).toFixed(1) : '0';
     
-    // Préparer les données pour le graphique circulaire SVG
+    // Préparer les données pour le graphique à barres
     // Trier par count décroissant et prendre les 5 premiers
     const sortedTypes = [...this.abonnesTypes].sort((a, b) => b.count - a.count);
     const topTypes = sortedTypes.slice(0, 5);
-    const autresCount = sortedTypes.slice(5).reduce((sum, type) => sum + type.count, 0);
     
-    // Créer les segments du graphique circulaire SVG
-    let svgPaths = '';
+    // Créer le graphique à barres SVG
+    let barChartSvg = '';
     let chartLegend = '';
-    let cumulativePercentage = 0;
     
-    const colors = ['#4CAF50', '#2196F3', '#FFC107', '#FF5722', '#9C27B0', '#9E9E9E'];
-    const centerX = 100;
-    const centerY = 100;
-    const radius = 80;
+    const colors = ['#4CAF50', '#2196F3', '#FFC107', '#FF5722', '#9C27B0'];
+    const barWidth = 30;
+    const barSpacing = 50;
+    const chartHeight = 200;
+    const chartWidth = 300;
+    const maxValue = Math.max(...topTypes.map(t => t.count), 1);
     
-    // Fonction pour calculer les coordonnées d'un point sur le cercle
-    const getCirclePoint = (percent: number) => {
-      const angle = (percent * 360 - 90) * Math.PI / 180;
-      return {
-        x: centerX + radius * Math.cos(angle),
-        y: centerY + radius * Math.sin(angle)
-      };
-    };
-    
+    // Créer les barres
     topTypes.forEach((type, index) => {
       const percentage = this.totalCount > 0 ? (type.count / this.totalCount) * 100 : 0;
+      const barHeight = (type.count / maxValue) * 150;
+      const x = index * barSpacing + 20;
+      const y = chartHeight - barHeight - 20;
       const color = colors[index];
       
-      // Créer le chemin SVG pour ce segment
-      if (percentage > 0) {
-        const startAngle = cumulativePercentage * 3.6;
-        const endAngle = (cumulativePercentage + percentage) * 3.6;
-        
-        const startPoint = getCirclePoint(startAngle / 360);
-        const endPoint = getCirclePoint(endAngle / 360);
-        
-        const largeArcFlag = percentage > 50 ? 1 : 0;
-        
-        svgPaths += `
-          <path 
-            d="M ${centerX} ${centerY} L ${startPoint.x} ${startPoint.y} A ${radius} ${radius} 0 ${largeArcFlag} 1 ${endPoint.x} ${endPoint.y} Z" 
-            fill="${color}"
-          />
-        `;
-      }
+      // Créer la barre
+      barChartSvg += `
+        <rect 
+          x="${x}" 
+          y="${y}" 
+          width="${barWidth}" 
+          height="${barHeight}" 
+          fill="${color}"
+        />
+        <text 
+          x="${x + barWidth/2}" 
+          y="${chartHeight - 5}" 
+          text-anchor="middle" 
+          font-size="10" 
+          fill="#333"
+        >
+          T${type.code}
+        </text>
+        <text 
+          x="${x + barWidth/2}" 
+          y="${y - 5}" 
+          text-anchor="middle" 
+          font-size="10" 
+          fill="#333"
+        >
+          ${type.count}
+        </text>
+      `;
       
       chartLegend += `
         <li>
@@ -139,39 +145,7 @@ export class StatistiqueAbonnesView {
           ${type.designation} (${percentage.toFixed(1)}%)
         </li>
       `;
-      
-      cumulativePercentage += percentage;
     });
-    
-    // Ajouter "Autres" si nécessaire
-    if (autresCount > 0) {
-      const percentage = this.totalCount > 0 ? (autresCount / this.totalCount) * 100 : 0;
-      const color = colors[5];
-      
-      if (percentage > 0) {
-        const startAngle = cumulativePercentage * 3.6;
-        const endAngle = (cumulativePercentage + percentage) * 3.6;
-        
-        const startPoint = getCirclePoint(startAngle / 360);
-        const endPoint = getCirclePoint(endAngle / 360);
-        
-        const largeArcFlag = percentage > 50 ? 1 : 0;
-        
-        svgPaths += `
-          <path 
-            d="M ${centerX} ${centerY} L ${startPoint.x} ${startPoint.y} A ${radius} ${radius} 0 ${largeArcFlag} 1 ${endPoint.x} ${endPoint.y} Z" 
-            fill="${color}"
-          />
-        `;
-      }
-      
-      chartLegend += `
-        <li>
-          <span class="legend-color" style="background-color: ${color};"></span>
-          Autres (${percentage.toFixed(1)}%)
-        </li>
-      `;
-    }
     
     // Trier les types d'abonnés selon le critère de tri
     const sortedAbonnesTypes = [...this.abonnesTypes].sort((a, b) => {
@@ -299,9 +273,9 @@ export class StatistiqueAbonnesView {
         <div class="chart-container">
           <h3>Répartition par Type d'Abonné</h3>
           <div class="chart-placeholder">
-            <div class="pie-chart-container">
-              <svg width="200" height="200" viewBox="0 0 200 200" class="pie-chart">
-                ${svgPaths}
+            <div class="bar-chart-container">
+              <svg width="300" height="200" viewBox="0 0 300 200" class="bar-chart">
+                ${barChartSvg}
               </svg>
             </div>
             <ul class="chart-legend">
