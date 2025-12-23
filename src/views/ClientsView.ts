@@ -62,11 +62,12 @@ export class ClientsView {
             <tr>
               <th>Catégorie</th>
               <th>Montant</th>
+              <th>Taux</th>
             </tr>
           </thead>
           <tbody>
             <tr>
-              <td colspan="2" class="text-center">
+              <td colspan="3" class="text-center">
                 <span class="loading-spinner"></span>
               </td>
             </tr>
@@ -493,12 +494,13 @@ export class ClientsView {
       if (creances.length === 0) {
         tableBody.innerHTML = `
           <tr>
-            <td colspan="2" class="text-center">Aucune donnée disponible</td>
+            <td colspan="3" class="text-center">Aucune donnée disponible</td>
           </tr>
         `;
       } else {
         let rows = '';
         creances.forEach(item => {
+          const tauxPourcentage = item.taux !== undefined ? item.taux.toFixed(2) : '0.00';
           rows += `
             <tr>
               <td>${item.categorie}</td>
@@ -508,6 +510,7 @@ export class ClientsView {
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2
               })}</td>
+              <td>${tauxPourcentage}%</td>
             </tr>
           `;
         });

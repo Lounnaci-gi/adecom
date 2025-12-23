@@ -1242,37 +1242,46 @@ app.get('/api/abonnes/creances-par-categorie', async (req, res) => {
     
     const startTime = Date.now();
     
+    // Requête pour obtenir les créances totales (utilisé pour calculer les pourcentages)
+    const sqlQueryTotal = `SELECT SUM(MONTTC) AS Sum_MONTTC FROM FACTURES WHERE PAIEMENT = 'T' GROUP BY PAIEMENT`;
+    const resultTotal = await dbfSqlService.executeSelectQuery(sqlQueryTotal);
+    const totalCreances = resultTotal.rows.length > 0 ? (resultTotal.rows[0].Sum_MONTTC || resultTotal.rows[0].sum_MONTTC || resultTotal.rows[0].MONTTC || 0) : 0;
+    
     // Requêtes pour obtenir les créances par catégorie
     const categories = ['1', '2', '3', '4'];
     const creancesParCategorie = [];
     
     // Ajout d'une requête spécifique pour TYPABON = '15'
-    const sqlQuery15 = `SELECT SUM(MONTTC) AS Sum_MONTTC FROM FACTURES WHERE TYPABON = '15' GROUP BY TYPABON`;
+    const sqlQuery15 = `SELECT SUM(MONTTC) AS Sum_MONTTC FROM FACTURES WHERE PAIEMENT = 'T' AND TYPABON = '15' GROUP BY TYPABON`;
     const result15 = await dbfSqlService.executeSelectQuery(sqlQuery15);
     
     if (result15.rows.length > 0) {
+      const montant15 = result15.rows[0].Sum_MONTTC || result15.rows[0].sum_MONTTC || result15.rows[0].MONTTC || 0;
       creancesParCategorie.push({
         categorie: '15',
-        montant: result15.rows[0].Sum_MONTTC || result15.rows[0].sum_MONTTC || result15.rows[0].MONTTC || 0
+        montant: montant15,
+        taux: totalCreances > 0 ? (montant15 / totalCreances) * 100 : 0
       });
     }
     
     for (const categorie of categories) {
       let sqlQuery;
       
-      // Pour la catégorie '1', exclure TYPABON = '17'
+      // Pour la catégorie '1', exclure TYPABON = '15'
       if (categorie === '1') {
-        sqlQuery = `SELECT SUM(MONTTC) AS Sum_MONTTC FROM FACTURES WHERE Left(TYPABON, 1) = '1' AND TYPABON != '15' GROUP BY Left(TYPABON, 1)`;
+        sqlQuery = `SELECT SUM(MONTTC) AS Sum_MONTTC FROM FACTURES WHERE Left(TYPABON, 1) = '1' AND PAIEMENT = 'T' AND TYPABON != '15' GROUP BY Left(TYPABON, 1)`;
       } else {
-        sqlQuery = `SELECT SUM(MONTTC) AS Sum_MONTTC FROM FACTURES WHERE Left(TYPABON, 1) = '${categorie}' GROUP BY Left(TYPABON, 1)`;
+        sqlQuery = `SELECT SUM(MONTTC) AS Sum_MONTTC FROM FACTURES WHERE Left(TYPABON, 1) = '${categorie}' AND PAIEMENT = 'T' GROUP BY Left(TYPABON, 1)`;
       }
       
       const result = await dbfSqlService.executeSelectQuery(sqlQuery);
       
       if (result.rows.length > 0) {
+        const montant = result.rows[0].Sum_MONTTC || result.rows[0].sum_MONTTC || result.rows[0].MONTTC || 0;
         creancesParCategorie.push({
           categorie: categorie,
-          montant: result.rows[0].Sum_MONTTC || result.rows[0].sum_MONTTC || result.rows[0].MONTTC || 0
+          montant: montant,
+          taux: totalCreances > 0 ? (montant / totalCreances) * 100 : 0
         });
       }
     }
