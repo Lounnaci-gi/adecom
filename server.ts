@@ -1242,21 +1242,57 @@ app.get('/api/abonnes/creances-par-categorie', async (req, res) => {
     
     const startTime = Date.now();
     
-    // Requête pour obtenir les créances totales (utilisé pour calculer les pourcentages)
+    // Exécuter les requêtes en parallèle pour optimiser les performances
     const sqlQueryTotal = `SELECT SUM(MONTTC) AS Sum_MONTTC FROM FACTURES WHERE PAIEMENT = 'T' GROUP BY PAIEMENT`;
     const resultTotal = await dbfSqlService.executeSelectQuery(sqlQueryTotal);
     const totalCreances = resultTotal.rows.length > 0 ? (resultTotal.rows[0].Sum_MONTTC || resultTotal.rows[0].sum_MONTTC || resultTotal.rows[0].MONTTC || 0) : 0;
     
-    // Requêtes pour obtenir les créances par catégorie
-    const categories = ['1', '2', '3', '4'];
+    // Préparer toutes les requêtes à exécuter en parallèle
+    const requetes = [
+      // Catégorie 15
+      dbfSqlService.executeSelectQuery(`SELECT SUM(MONTTC) AS Sum_MONTTC FROM FACTURES WHERE PAIEMENT = 'T' AND TYPABON = '15' GROUP BY TYPABON`),
+      // Prestations
+      (async () => {
+        const resultPrestations = await dbfSqlService.executeSelectQuery(`SELECT MONTTC, TYPABON FROM FACTURES WHERE PAIEMENT = 'T'`);
+        const prestationsRecords = resultPrestations.rows.filter(row => {
+          const typabon = row.TYPABON || row.typabon || '';
+          return typabon === '' || typabon === null || typabon === undefined || (typeof typabon === 'string' && typabon.trim() === '');
+        });
+        return {
+          rows: [{
+            Count_MONTTC: prestationsRecords.reduce((sum, row) => sum + (row.MONTTC || row.monttc || 0), 0)
+          }]
+        };
+      })(),
+      // Catégorie 1 (requête spécifique)
+      (async () => {
+        const allFacturesResult = await dbfSqlService.executeSelectQuery(`SELECT MONTTC, TYPABON FROM FACTURES WHERE PAIEMENT = 'T'`);
+        const filteredRecords = allFacturesResult.rows.filter(row => {
+          const typabon = row.TYPABON || row.typabon || '';
+          return ['10', '11', '12', '17'].includes(typabon);
+        });
+        return {
+          rows: [{
+            Sum_MONTTC: filteredRecords.reduce((sum, row) => sum + (row.MONTTC || row.monttc || 0), 0)
+          }]
+        };
+      })(),
+      // Catégorie 2
+      dbfSqlService.executeSelectQuery(`SELECT SUM(MONTTC) AS Sum_MONTTC FROM FACTURES WHERE Left(TYPABON, 1) = '2' AND PAIEMENT = 'T' GROUP BY Left(TYPABON, 1)`),
+      // Catégorie 3
+      dbfSqlService.executeSelectQuery(`SELECT SUM(MONTTC) AS Sum_MONTTC FROM FACTURES WHERE Left(TYPABON, 1) = '3' AND PAIEMENT = 'T' GROUP BY Left(TYPABON, 1)`),
+      // Catégorie 4
+      dbfSqlService.executeSelectQuery(`SELECT SUM(MONTTC) AS Sum_MONTTC FROM FACTURES WHERE Left(TYPABON, 1) = '4' AND PAIEMENT = 'T' GROUP BY Left(TYPABON, 1)`)
+    ];
+    
+    // Exécuter toutes les requêtes en parallèle
+    const results = await Promise.all(requetes);
+    
     const creancesParCategorie: Array<{categorie: string, montant: number, taux: number}> = [];
     
-    // Ajout d'une requête spécifique pour TYPABON = '15'
-    const sqlQuery15 = `SELECT SUM(MONTTC) AS Sum_MONTTC FROM FACTURES WHERE PAIEMENT = 'T' AND TYPABON = '15' GROUP BY TYPABON`;
-    const result15 = await dbfSqlService.executeSelectQuery(sqlQuery15);
-    
-    if (result15.rows.length > 0) {
-      const montant15 = result15.rows[0].Sum_MONTTC || result15.rows[0].sum_MONTTC || result15.rows[0].MONTTC || 0;
+    // Catégorie 15
+    if (results[0].rows.length > 0 && (results[0].rows[0].Sum_MONTTC || results[0].rows[0].sum_MONTTC || results[0].rows[0].MONTTC)) {
+      const montant15 = results[0].rows[0].Sum_MONTTC || results[0].rows[0].sum_MONTTC || results[0].rows[0].MONTTC || 0;
       creancesParCategorie.push({
         categorie: '15',
         montant: montant15,
@@ -1264,23 +1300,9 @@ app.get('/api/abonnes/creances-par-categorie', async (req, res) => {
       });
     }
     
-    // Ajout d'une requête spécifique pour les Prestations (TYPABON vide)
-    // On récupère toutes les factures avec PAIEMENT = 'T' et on filtre côté serveur
-    const sqlQueryPrestations = `SELECT MONTTC, TYPABON FROM FACTURES WHERE PAIEMENT = 'T'`;
-    const resultPrestations = await dbfSqlService.executeSelectQuery(sqlQueryPrestations);
-    
-    // Filtrer les enregistrements où TYPABON est vide
-    const prestationsRecords = resultPrestations.rows.filter(row => {
-      const typabon = row.TYPABON || row.typabon || '';
-      return typabon === '' || typabon === null || typabon === undefined || (typeof typabon === 'string' && typabon.trim() === '');
-    });
-    
-    // Calculer la somme des montants pour les prestations
-    const montantPrestations = prestationsRecords.reduce((sum, row) => {
-      return sum + (row.MONTTC || row.monttc || 0);
-    }, 0);
-    
-    if (montantPrestations > 0) {
+    // Prestations
+    if (results[1].rows.length > 0 && (results[1].rows[0].Count_MONTTC || results[1].rows[0].count_MONTTC || results[1].rows[0].MONTTC)) {
+      const montantPrestations = results[1].rows[0].Count_MONTTC || results[1].rows[0].count_MONTTC || results[1].rows[0].MONTTC || 0;
       creancesParCategorie.push({
         categorie: 'Prestations',
         montant: montantPrestations,
@@ -1288,41 +1310,20 @@ app.get('/api/abonnes/creances-par-categorie', async (req, res) => {
       });
     }
     
-    for (const categorie of categories) {
-      let sqlQuery;
-      
-      // Pour la catégorie '1', utiliser la requête spécifique
-      if (categorie === '1') {
-        // On récupère toutes les factures avec PAIEMENT = 'T' et on filtre côté serveur
-        const allFacturesQuery = `SELECT MONTTC, TYPABON FROM FACTURES WHERE PAIEMENT = 'T'`;
-        const allFacturesResult = await dbfSqlService.executeSelectQuery(allFacturesQuery);
-        
-        // Filtrer les enregistrements où TYPABON est dans ('10', '11', '12', '17')
-        const filteredRecords = allFacturesResult.rows.filter(row => {
-          const typabon = row.TYPABON || row.typabon || '';
-          return ['10', '11', '12', '17'].includes(typabon);
-        });
-        
-        // Calculer la somme des montants
-        const montant = filteredRecords.reduce((sum, row) => {
-          return sum + (row.MONTTC || row.monttc || 0);
-        }, 0);
-        
-        if (montant > 0) {
-          creancesParCategorie.push({
-            categorie: categorie,
-            montant: montant,
-            taux: totalCreances > 0 ? (montant / totalCreances) * 100 : 0
-          });
-        }
-        continue; // Passer à la catégorie suivante
-      } else {
-        sqlQuery = `SELECT SUM(MONTTC) AS Sum_MONTTC FROM FACTURES WHERE Left(TYPABON, 1) = '${categorie}' AND PAIEMENT = 'T' GROUP BY Left(TYPABON, 1)`;
-      }
-      
-      const result = await dbfSqlService.executeSelectQuery(sqlQuery);
-      
-      if (result.rows.length > 0) {
+    // Catégorie 1
+    if (results[2].rows.length > 0 && (results[2].rows[0].Sum_MONTTC || results[2].rows[0].sum_MONTTC || results[2].rows[0].MONTTC)) {
+      const montant1 = results[2].rows[0].Sum_MONTTC || results[2].rows[0].sum_MONTTC || results[2].rows[0].MONTTC || 0;
+      creancesParCategorie.push({
+        categorie: '1',
+        montant: montant1,
+        taux: totalCreances > 0 ? (montant1 / totalCreances) * 100 : 0
+      });
+    }
+    
+    // Catégories 2, 3, 4
+    ['2', '3', '4'].forEach((categorie, index) => {
+      const result = results[3 + index];
+      if (result.rows.length > 0 && (result.rows[0].Sum_MONTTC || result.rows[0].sum_MONTTC || result.rows[0].MONTTC)) {
         const montant = result.rows[0].Sum_MONTTC || result.rows[0].sum_MONTTC || result.rows[0].MONTTC || 0;
         creancesParCategorie.push({
           categorie: categorie,
@@ -1330,7 +1331,7 @@ app.get('/api/abonnes/creances-par-categorie', async (req, res) => {
           taux: totalCreances > 0 ? (montant / totalCreances) * 100 : 0
         });
       }
-    }
+    });
     
     const executionTime = Date.now() - startTime;
     

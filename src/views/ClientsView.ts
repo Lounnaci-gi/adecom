@@ -506,9 +506,28 @@ export class ClientsView {
         let rows = '';
         creances.forEach(item => {
           const tauxPourcentage = item.taux !== undefined ? item.taux.toFixed(2) : '0.00';
+          // Renommer les catégories selon les spécifications
+          let categorieLibelle = item.categorie;
+          switch(item.categorie) {
+            case '1':
+              categorieLibelle = 'Cat I';
+              break;
+            case '2':
+              categorieLibelle = 'Cat II';
+              break;
+            case '3':
+              categorieLibelle = 'Cat III';
+              break;
+            case '4':
+              categorieLibelle = 'Cat IV';
+              break;
+            case '15':
+              categorieLibelle = 'Vente en gros';
+              break;
+          }
           rows += `
             <tr>
-              <td>${item.categorie}</td>
+              <td>${categorieLibelle}</td>
               <td>${parseFloat(item.montant).toLocaleString('fr-FR', { 
                 style: 'currency', 
                 currency: 'DZD',
