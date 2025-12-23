@@ -355,7 +355,7 @@ export class ClientsView {
         sessionStorage.setItem('creancesEau', JSON.stringify(cacheData));
         
         // Mettre à jour l'affichage
-        this.updateCreancesEauDisplay(result.totalCreancesEau || 0);
+        this.updateCreancesEauDisplay(result || 0);
         return result;
       }).catch(error => {
         console.error('Erreur lors du chargement des créances d\'eau:', error);
@@ -480,8 +480,13 @@ export class ClientsView {
 
   private async loadCreancesParCategorie(): Promise<void> {
     try {
-      const creancesParCategorie = await DbfService.getAbonnesCreancesParCategorie();
-      this.updateCreancesParCategorieDisplay(creancesParCategorie);
+      // Charger les créances par catégorie sans attendre la fin pour afficher le résultat
+      DbfService.getAbonnesCreancesParCategorie().then(creancesParCategorie => {
+        this.updateCreancesParCategorieDisplay(creancesParCategorie);
+      }).catch(error => {
+        console.error('Erreur lors du chargement des créances par catégorie:', error);
+        this.updateCreancesParCategorieDisplay([]);
+      });
     } catch (error) {
       console.error('Erreur lors du chargement des créances par catégorie:', error);
       this.updateCreancesParCategorieDisplay([]);

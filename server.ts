@@ -504,10 +504,10 @@ app.get('/api/abonnes/count-by-type', (req, res) => {
       }
     }
     
-    const typabonCount = {};
-    const typabonResilieCount = {};
-    const typabonSansCompteurCount = {};
-    const typabonCompteurArretCount = {};
+    const typabonCount: { [key: string]: number } = {};
+    const typabonResilieCount: { [key: string]: number } = {};
+    const typabonSansCompteurCount: { [key: string]: number } = {};
+    const typabonCompteurArretCount: { [key: string]: number } = {};
     for (let i = 0; i < abonneHeader.numberOfRecords; i++) {
       const recordOffset = abonneHeader.headerLength + (i * abonneHeader.recordLength);
       
@@ -559,10 +559,10 @@ app.get('/api/abonnes/count-by-type', (req, res) => {
       .sort((a, b) => b.count - a.count);
     
     const response = {
-      totalCount: Object.values(typabonCount).reduce((sum, count) => sum + count, 0),
-      totalResilieCount: Object.values(typabonResilieCount).reduce((sum, count) => sum + count, 0),
-      totalSansCompteurCount: Object.values(typabonSansCompteurCount).reduce((sum, count) => sum + count, 0),
-      totalCompteurArretCount: Object.values(typabonCompteurArretCount).reduce((sum, count) => sum + count, 0),
+      totalCount: Object.values(typabonCount).reduce((sum: number, count: number) => sum + count, 0),
+      totalResilieCount: Object.values(typabonResilieCount).reduce((sum: number, count: number) => sum + count, 0),
+      totalSansCompteurCount: Object.values(typabonSansCompteurCount).reduce((sum: number, count: number) => sum + count, 0),
+      totalCompteurArretCount: Object.values(typabonCompteurArretCount).reduce((sum: number, count: number) => sum + count, 0),
       types: result,
       indexesUsed: {
         abonne: specificAbonneIndexes.length > 0 ? specificAbonneIndexes.join(', ') : (abonneIndexes.length > 0 ? abonneIndexes.join(', ') : null),
@@ -1249,7 +1249,7 @@ app.get('/api/abonnes/creances-par-categorie', async (req, res) => {
     
     // Requêtes pour obtenir les créances par catégorie
     const categories = ['1', '2', '3', '4'];
-    const creancesParCategorie = [];
+    const creancesParCategorie: Array<{categorie: string, montant: number, taux: number}> = [];
     
     // Ajout d'une requête spécifique pour TYPABON = '15'
     const sqlQuery15 = `SELECT SUM(MONTTC) AS Sum_MONTTC FROM FACTURES WHERE PAIEMENT = 'T' AND TYPABON = '15' GROUP BY TYPABON`;
@@ -1264,12 +1264,58 @@ app.get('/api/abonnes/creances-par-categorie', async (req, res) => {
       });
     }
     
+    // Ajout d'une requête spécifique pour les Prestations (TYPABON vide)
+    // On récupère toutes les factures avec PAIEMENT = 'T' et on filtre côté serveur
+    const sqlQueryPrestations = `SELECT MONTTC, TYPABON FROM FACTURES WHERE PAIEMENT = 'T'`;
+    const resultPrestations = await dbfSqlService.executeSelectQuery(sqlQueryPrestations);
+    
+    // Filtrer les enregistrements où TYPABON est vide
+    const prestationsRecords = resultPrestations.rows.filter(row => {
+      const typabon = row.TYPABON || row.typabon || '';
+      return typabon === '' || typabon === null || typabon === undefined || (typeof typabon === 'string' && typabon.trim() === '');
+    });
+    
+    // Calculer la somme des montants pour les prestations
+    const montantPrestations = prestationsRecords.reduce((sum, row) => {
+      return sum + (row.MONTTC || row.monttc || 0);
+    }, 0);
+    
+    if (montantPrestations > 0) {
+      creancesParCategorie.push({
+        categorie: 'Prestations',
+        montant: montantPrestations,
+        taux: totalCreances > 0 ? (montantPrestations / totalCreances) * 100 : 0
+      });
+    }
+    
     for (const categorie of categories) {
       let sqlQuery;
       
-      // Pour la catégorie '1', exclure TYPABON = '15'
+      // Pour la catégorie '1', utiliser la requête spécifique
       if (categorie === '1') {
-        sqlQuery = `SELECT SUM(MONTTC) AS Sum_MONTTC FROM FACTURES WHERE Left(TYPABON, 1) = '1' AND PAIEMENT = 'T' AND TYPABON != '15' GROUP BY Left(TYPABON, 1)`;
+        // On récupère toutes les factures avec PAIEMENT = 'T' et on filtre côté serveur
+        const allFacturesQuery = `SELECT MONTTC, TYPABON FROM FACTURES WHERE PAIEMENT = 'T'`;
+        const allFacturesResult = await dbfSqlService.executeSelectQuery(allFacturesQuery);
+        
+        // Filtrer les enregistrements où TYPABON est dans ('10', '11', '12', '17')
+        const filteredRecords = allFacturesResult.rows.filter(row => {
+          const typabon = row.TYPABON || row.typabon || '';
+          return ['10', '11', '12', '17'].includes(typabon);
+        });
+        
+        // Calculer la somme des montants
+        const montant = filteredRecords.reduce((sum, row) => {
+          return sum + (row.MONTTC || row.monttc || 0);
+        }, 0);
+        
+        if (montant > 0) {
+          creancesParCategorie.push({
+            categorie: categorie,
+            montant: montant,
+            taux: totalCreances > 0 ? (montant / totalCreances) * 100 : 0
+          });
+        }
+        continue; // Passer à la catégorie suivante
       } else {
         sqlQuery = `SELECT SUM(MONTTC) AS Sum_MONTTC FROM FACTURES WHERE Left(TYPABON, 1) = '${categorie}' AND PAIEMENT = 'T' GROUP BY Left(TYPABON, 1)`;
       }
