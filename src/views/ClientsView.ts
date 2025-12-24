@@ -574,6 +574,48 @@ export class ClientsView {
             </tr>
           `;
         });
+        
+        // Calculer les sous-totaux
+        const totalActifs = creances.reduce((sum, item) => sum + (item.montantActifs || 0), 0);
+        const totalResilies = creances.reduce((sum, item) => sum + (item.montantResilies || 0), 0);
+        const grandTotal = totalActifs + totalResilies;
+        
+        // Calculer les pourcentages
+        const pourcentageActifs = grandTotal > 0 ? (totalActifs / grandTotal) * 100 : 0;
+        const pourcentageResilies = grandTotal > 0 ? (totalResilies / grandTotal) * 100 : 0;
+        
+        // Ajouter les sous-totaux au tableau
+        rows += `
+          <tr class="table-subtotal-row" style="background-color: #f8f9fa; border-top: 2px solid #dee2e6;">
+            <td colspan="1" class="text-end font-weight-bold" style="background-color: #e9ecef;">Sous-totaux:</td>
+            <td class="font-weight-bold">${totalActifs.toLocaleString('fr-FR', { 
+              style: 'currency', 
+              currency: 'DZD',
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2
+            })}</td>
+            <td class="font-weight-bold">${pourcentageActifs.toFixed(2)}%</td>
+            <td class="font-weight-bold">${totalResilies.toLocaleString('fr-FR', { 
+              style: 'currency', 
+              currency: 'DZD',
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2
+            })}</td>
+            <td class="font-weight-bold">${pourcentageResilies.toFixed(2)}%</td>
+          </tr>
+          <tr class="table-grandtotal-row" style="background-color: #e9ecef; border-top: 3px solid #007bff; border-bottom: 3px solid #007bff;">
+            <td colspan="1" class="text-end font-weight-bold" style="background-color: #dee2e6;">Total Général:</td>
+            <td colspan="1" class="font-weight-bold">${grandTotal.toLocaleString('fr-FR', { 
+              style: 'currency', 
+              currency: 'DZD',
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2
+            })}</td>
+            <td class="font-weight-bold">100.00%</td>
+            <td colspan="2" class="font-weight-bold"></td>
+          </tr>
+        `;
+        
         tableBody.innerHTML = rows;
       }
     }
