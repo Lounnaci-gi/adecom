@@ -1242,96 +1242,113 @@ app.get('/api/abonnes/creances-par-categorie', async (req, res) => {
     
     const startTime = Date.now();
     
-    // Exécuter les requêtes en parallèle pour optimiser les performances
-    const sqlQueryTotal = `SELECT SUM(MONTTC) AS Sum_MONTTC FROM FACTURES WHERE PAIEMENT = 'T' GROUP BY PAIEMENT`;
-    const resultTotal = await dbfSqlService.executeSelectQuery(sqlQueryTotal);
-    const totalCreances = resultTotal.rows.length > 0 ? (resultTotal.rows[0].Sum_MONTTC || resultTotal.rows[0].sum_MONTTC || resultTotal.rows[0].MONTTC || 0) : 0;
+    // Pour le tableau Créances par Catégorie, récupérer les données pour les abonnés actifs et résiliés
+    let creancesParCategorie: any[] = [];
     
-    // Préparer toutes les requêtes à exécuter en parallèle
-    const requetes = [
-      // Catégorie 15
-      dbfSqlService.executeSelectQuery(`SELECT SUM(MONTTC) AS Sum_MONTTC FROM FACTURES WHERE PAIEMENT = 'T' AND TYPABON = '15' GROUP BY TYPABON`),
-      // Prestations
-      (async () => {
-        const resultPrestations = await dbfSqlService.executeSelectQuery(`SELECT MONTTC, TYPABON FROM FACTURES WHERE PAIEMENT = 'T'`);
-        const prestationsRecords = resultPrestations.rows.filter(row => {
-          const typabon = row.TYPABON || row.typabon || '';
-          return typabon === '' || typabon === null || typabon === undefined || (typeof typabon === 'string' && typabon.trim() === '');
-        });
-        return {
-          rows: [{
-            Count_MONTTC: prestationsRecords.reduce((sum, row) => sum + (row.MONTTC || row.monttc || 0), 0)
-          }]
-        };
-      })(),
-      // Catégorie 1 (requête spécifique)
-      (async () => {
-        const allFacturesResult = await dbfSqlService.executeSelectQuery(`SELECT MONTTC, TYPABON FROM FACTURES WHERE PAIEMENT = 'T'`);
-        const filteredRecords = allFacturesResult.rows.filter(row => {
-          const typabon = row.TYPABON || row.typabon || '';
-          return ['10', '11', '12', '17'].includes(typabon);
-        });
-        return {
-          rows: [{
-            Sum_MONTTC: filteredRecords.reduce((sum, row) => sum + (row.MONTTC || row.monttc || 0), 0)
-          }]
-        };
-      })(),
-      // Catégorie 2
-      dbfSqlService.executeSelectQuery(`SELECT SUM(MONTTC) AS Sum_MONTTC FROM FACTURES WHERE Left(TYPABON, 1) = '2' AND PAIEMENT = 'T' GROUP BY Left(TYPABON, 1)`),
-      // Catégorie 3
-      dbfSqlService.executeSelectQuery(`SELECT SUM(MONTTC) AS Sum_MONTTC FROM FACTURES WHERE Left(TYPABON, 1) = '3' AND PAIEMENT = 'T' GROUP BY Left(TYPABON, 1)`),
-      // Catégorie 4
-      dbfSqlService.executeSelectQuery(`SELECT SUM(MONTTC) AS Sum_MONTTC FROM FACTURES WHERE Left(TYPABON, 1) = '4' AND PAIEMENT = 'T' GROUP BY Left(TYPABON, 1)`)
-    ];
-    
-    // Exécuter toutes les requêtes en parallèle
-    const results = await Promise.all(requetes);
-    
-    const creancesParCategorie: Array<{categorie: string, montant: number, taux: number}> = [];
-    
-    // Catégorie 15
-    if (results[0].rows.length > 0 && (results[0].rows[0].Sum_MONTTC || results[0].rows[0].sum_MONTTC || results[0].rows[0].MONTTC)) {
-      const montant15 = results[0].rows[0].Sum_MONTTC || results[0].rows[0].sum_MONTTC || results[0].rows[0].MONTTC || 0;
-      creancesParCategorie.push({
-        categorie: '15',
-        montant: montant15,
-        taux: totalCreances > 0 ? (montant15 / totalCreances) * 100 : 0
+    try {
+      // Récupérer toutes les données nécessaires
+      const facturesResult = await dbfSqlService.executeSelectQuery(`SELECT NUMAB, MONTTC, TYPABON, PAIEMENT FROM FACTURES WHERE PAIEMENT = 'T'`);
+      const abonmentResult = await dbfSqlService.executeSelectQuery(`SELECT NUMAB, ETATCPT FROM ABONMENT`);
+      
+      // Calculer le total des créances
+      const totalCreances = facturesResult.rows.reduce((sum, row) => {
+        return sum + (row.MONTTC || row.monttc || 0);
+      }, 0);
+      
+      // Créer un index pour les abonnements résiliés
+      const etatCpt40 = new Set();
+      abonmentResult.rows.forEach(row => {
+        if ((row.ETATCPT || row.etatcpt) === '40') {
+          etatCpt40.add((row.NUMAB || row.numab));
+        }
       });
-    }
-    
-    // Prestations
-    if (results[1].rows.length > 0 && (results[1].rows[0].Count_MONTTC || results[1].rows[0].count_MONTTC || results[1].rows[0].MONTTC)) {
-      const montantPrestations = results[1].rows[0].Count_MONTTC || results[1].rows[0].count_MONTTC || results[1].rows[0].MONTTC || 0;
-      creancesParCategorie.push({
-        categorie: 'Prestations',
-        montant: montantPrestations,
-        taux: totalCreances > 0 ? (montantPrestations / totalCreances) * 100 : 0
+      
+      // Calculer les créances pour chaque catégorie (actifs et résiliés)
+      const creancesParCategorieData = {
+        '1': { actifs: 0, resilies: 0 },
+        '2': { actifs: 0, resilies: 0 },
+        '3': { actifs: 0, resilies: 0 },
+        '4': { actifs: 0, resilies: 0 },
+        '15': { actifs: 0, resilies: 0 },
+        'Prestations': { actifs: 0, resilies: 0 }
+      };
+      
+      facturesResult.rows.forEach(row => {
+        const numab = row.NUMAB || row.numab;
+        const typabon = row.TYPABON || row.typabon || '';
+        const montant = row.MONTTC || row.monttc || 0;
+        
+        // Déterminer la catégorie
+        let categorie = '';
+        if (['10', '11', '12', '17'].includes(typabon)) {
+          categorie = '1';
+        } else if (typabon.startsWith('2')) {
+          categorie = '2';
+        } else if (typabon.startsWith('3')) {
+          categorie = '3';
+        } else if (typabon.startsWith('4')) {
+          categorie = '4';
+        } else if (typabon === '15') {
+          categorie = '15';
+        } else if (typabon === '' || typabon === null || typabon === undefined || (typeof typabon === 'string' && typabon.trim() === '')) {
+          categorie = 'Prestations';
+        }
+        
+        if (categorie) {
+          if (etatCpt40.has(numab)) {
+            // Abonné résilié
+            creancesParCategorieData[categorie].resilies += montant;
+          } else {
+            // Abonné actif
+            creancesParCategorieData[categorie].actifs += montant;
+          }
+        }
       });
-    }
-    
-    // Catégorie 1
-    if (results[2].rows.length > 0 && (results[2].rows[0].Sum_MONTTC || results[2].rows[0].sum_MONTTC || results[2].rows[0].MONTTC)) {
-      const montant1 = results[2].rows[0].Sum_MONTTC || results[2].rows[0].sum_MONTTC || results[2].rows[0].MONTTC || 0;
-      creancesParCategorie.push({
-        categorie: '1',
-        montant: montant1,
-        taux: totalCreances > 0 ? (montant1 / totalCreances) * 100 : 0
+      
+      // Initialiser le tableau des créances par catégorie
+      
+      // Ajouter les données pour chaque catégorie avec les deux colonnes
+      Object.keys(creancesParCategorieData).forEach(categorie => {
+        const data = creancesParCategorieData[categorie];
+        
+        // Ne pas ajouter la catégorie si les deux montants sont nuls
+        if (data.actifs > 0 || data.resilies > 0) {
+          let categorieLibelle = '';
+          switch(categorie) {
+            case '1':
+              categorieLibelle = 'Cat I';
+              break;
+            case '2':
+              categorieLibelle = 'Cat II';
+              break;
+            case '3':
+              categorieLibelle = 'Cat III';
+              break;
+            case '4':
+              categorieLibelle = 'Cat IV';
+              break;
+            case '15':
+              categorieLibelle = 'Vente en gros';
+              break;
+            case 'Prestations':
+              categorieLibelle = 'Prestations';
+              break;
+          }
+          
+          if (categorieLibelle) {
+            creancesParCategorie.push({
+              categorie: categorieLibelle,
+              montantActifs: data.actifs,
+              tauxActifs: totalCreances > 0 ? (data.actifs / totalCreances) * 100 : 0,
+              montantResilies: data.resilies,
+              tauxResilies: totalCreances > 0 ? (data.resilies / totalCreances) * 100 : 0
+            });
+          }
+        }
       });
+    } catch (error) {
+      console.error('Erreur lors de la récupération des créances par catégorie:', error);
     }
-    
-    // Catégories 2, 3, 4
-    ['2', '3', '4'].forEach((categorie, index) => {
-      const result = results[3 + index];
-      if (result.rows.length > 0 && (result.rows[0].Sum_MONTTC || result.rows[0].sum_MONTTC || result.rows[0].MONTTC)) {
-        const montant = result.rows[0].Sum_MONTTC || result.rows[0].sum_MONTTC || result.rows[0].MONTTC || 0;
-        creancesParCategorie.push({
-          categorie: categorie,
-          montant: montant,
-          taux: totalCreances > 0 ? (montant / totalCreances) * 100 : 0
-        });
-      }
-    });
     
     const executionTime = Date.now() - startTime;
     

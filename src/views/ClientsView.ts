@@ -61,8 +61,10 @@ export class ClientsView {
           <thead>
             <tr>
               <th>Catégorie</th>
-              <th>Montant</th>
-              <th>Taux</th>
+              <th>Montant Actifs</th>
+              <th>Taux Actifs</th>
+              <th>Montant Résiliés</th>
+              <th>Taux Résiliés</th>
             </tr>
           </thead>
           <tbody>
@@ -505,7 +507,6 @@ export class ClientsView {
       } else {
         let rows = '';
         creances.forEach(item => {
-          const tauxPourcentage = item.taux !== undefined ? item.taux.toFixed(2) : '0.00';
           // Renommer les catégories selon les spécifications
           let categorieLibelle = item.categorie;
           switch(item.categorie) {
@@ -524,17 +525,52 @@ export class ClientsView {
             case '15':
               categorieLibelle = 'Vente en gros';
               break;
+            case 'Cat III Résiliés':
+              categorieLibelle = 'Cat III Résiliés';
+              break;
+            case 'Cat II Résiliés':
+              categorieLibelle = 'Cat II Résiliés';
+              break;
+            case 'Cat IV Résiliés':
+              categorieLibelle = 'Cat IV Résiliés';
+              break;
+            case 'Cat I Résiliés':
+              categorieLibelle = 'Cat I Résiliés';
+              break;
+            case 'Vente en Gros Résiliés':
+              categorieLibelle = 'Vente en Gros Résiliés';
+              break;
+            case 'Prestations Résiliés':
+              categorieLibelle = 'Prestations Résiliés';
+              break;
+            default:
+              categorieLibelle = item.categorie;
+              break;
           }
+          
+          // Formater les montants et taux
+          const montantActifs = item.montantActifs !== undefined ? parseFloat(item.montantActifs) : 0;
+          const tauxActifs = item.tauxActifs !== undefined ? item.tauxActifs.toFixed(2) : '0.00';
+          const montantResilies = item.montantResilies !== undefined ? parseFloat(item.montantResilies) : 0;
+          const tauxResilies = item.tauxResilies !== undefined ? item.tauxResilies.toFixed(2) : '0.00';
+          
           rows += `
             <tr>
               <td>${categorieLibelle}</td>
-              <td>${parseFloat(item.montant).toLocaleString('fr-FR', { 
+              <td>${montantActifs.toLocaleString('fr-FR', { 
                 style: 'currency', 
                 currency: 'DZD',
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2
               })}</td>
-              <td>${tauxPourcentage}%</td>
+              <td>${tauxActifs}%</td>
+              <td>${montantResilies.toLocaleString('fr-FR', { 
+                style: 'currency', 
+                currency: 'DZD',
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+              })}</td>
+              <td>${tauxResilies}%</td>
             </tr>
           `;
         });
