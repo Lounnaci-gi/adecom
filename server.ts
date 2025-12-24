@@ -21,6 +21,7 @@ interface ServerCache<T> {
 let creancesCache: ServerCache<number> | null = null;
 let creancesResiliesCache: ServerCache<number> | null = null;
 let creancesEauCache: ServerCache<number> | null = null;
+let creancesPrestationsCache: ServerCache<number> | null = null;
 let creancesParCategorieCache: ServerCache<any> | null = null;
 let centresCountCache: ServerCache<number> | null = null;
 let abonnesCountCache: ServerCache<number> | null = null;
@@ -1218,6 +1219,62 @@ app.get('/api/abonnes/creances-eau', async (req, res) => {
     console.error('Erreur lors du calcul des créances d\'eau:', error);
     res.status(500).json({ 
       error: 'Erreur serveur lors du calcul des créances d\'eau',
+      message: (error as Error).message
+    });
+  }
+});
+
+// API endpoint pour récupérer les créances de prestations
+app.get('/api/abonnes/creances-prestations', async (req, res) => {
+  const startTime = Date.now();
+  const forceRefresh = req.query.refresh === 'true';
+  
+  if (creancesPrestationsCache && !forceRefresh) {
+    const cacheAge = Date.now() - creancesPrestationsCache.timestamp;
+    if (cacheAge < CACHE_DURATION) {
+      console.log('Récupération des créances prestations depuis le cache');
+      res.json({
+        totalCreancesPrestations: creancesPrestationsCache.data,
+        executionTime: 0,
+        fromCache: true,
+        cacheAge: Math.floor(cacheAge / 1000)
+      });
+      return;
+    }
+  }
+  
+  try {
+    // Calculer les créances Prestations
+    // La requête avec TYPE <> 'E' peut ne pas être supportée par le système de requêtes
+    // On récupère donc toutes les factures avec PAIEMENT = 'T' et on filtre côté serveur
+    const facturesResult = await dbfSqlService.executeSelectQuery(`SELECT MONTTC, TYPE, PAIEMENT FROM FACTURES WHERE PAIEMENT = 'T'`);
+        
+    // Filtrer les enregistrements où TYPE est différent de 'E' et calculer la somme
+    const totalCreancesPrestations = facturesResult.rows.reduce((sum, row) => {
+      const type = row.TYPE || row.type || '';
+      if (type !== 'E') {
+        return sum + (row.MONTTC || row.monttc || 0);
+      }
+      return sum;
+    }, 0);
+        
+    // Mettre en cache les résultats
+    creancesPrestationsCache = {
+      data: totalCreancesPrestations,
+      timestamp: Date.now()
+    };
+        
+    const executionTime = Date.now() - startTime;
+        
+    res.json({
+      totalCreancesPrestations: totalCreancesPrestations,
+      executionTime: executionTime,
+      fromCache: forceRefresh ? false : (creancesPrestationsCache ? true : false)
+    });
+  } catch (error) {
+    console.error('Erreur lors du calcul des créances prestations:', error);
+    res.status(500).json({ 
+      error: 'Erreur serveur lors du calcul des créances prestations',
       message: (error as Error).message
     });
   }

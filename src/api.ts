@@ -264,6 +264,27 @@ export async function getAbonnesCreancesEau(forceRefresh: boolean = false) {
 }
 
 /**
+ * Récupère la somme des créances des prestations depuis FACTURES.DBF
+ * @param forceRefresh Force le rafraîchissement des données
+ */
+export async function getAbonnesCreancesPrestations(forceRefresh: boolean = false) {
+  try {
+    const url = forceRefresh 
+      ? `${API_BASE_URL}/api/abonnes/creances-prestations?refresh=true`
+      : `${API_BASE_URL}/api/abonnes/creances-prestations`;
+    
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('Erreur lors de la récupération des créances des prestations:', error);
+    throw error;
+  }
+}
+
+/**
  * Récupère les créances par catégorie depuis FACTURES.DBF
  * @param forceRefresh Force le rafraîchissement des données
  */

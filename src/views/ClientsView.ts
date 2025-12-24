@@ -53,6 +53,13 @@ export class ClientsView {
             <span class="loading-spinner"></span>
           </p>
         </div>
+        
+        <div class="stat-card">
+          <h3>Créance Total Prestations</h3>
+          <p class="stat-value" id="creances-prestations-value">
+            <span class="loading-spinner"></span>
+          </p>
+        </div>
       </div>
       
       <div class="clients-table-container">
@@ -298,6 +305,9 @@ export class ClientsView {
       // Charger les créances par catégorie
       this.loadCreancesParCategorie();
       
+      // Charger les créances Prestations
+      this.loadCreancesPrestationsData();
+      
       // Attendre que les trois requêtes soient terminées (pour la gestion des erreurs globale)
       await Promise.all([creancesPromise, creancesResiliesPromise, creancesEauPromise]);
     } catch (error) {
@@ -312,8 +322,9 @@ export class ClientsView {
       sessionStorage.removeItem('creancesAbonnes');
       sessionStorage.removeItem('creancesResilies');
       sessionStorage.removeItem('creancesEau');
+      sessionStorage.removeItem('creancesPrestations');
       
-      // Charger les trois jeux de données en parallèle en forçant le rafraîchissement et mettre à jour l'affichage dès que chaque requête termine
+      // Charger les quatre jeux de données en parallèle en forçant le rafraîchissement et mettre à jour l'affichage dès que chaque requête termine
       const creancesPromise = DbfService.getAbonnesCreances(true).then(async result => {
         // Sauvegarder dans le sessionStorage
         const cacheData = {
@@ -365,8 +376,43 @@ export class ClientsView {
         return 0;
       });
       
-      // Attendre que les trois requêtes soient terminées (pour la gestion des erreurs globale)
-      await Promise.all([creancesPromise, creancesResiliesPromise, creancesEauPromise]);
+      // Charger les créances Prestations
+      DbfService.getAbonnesCreancesPrestations(true).then(async result => {
+        // Sauvegarder dans le sessionStorage
+        const cacheData = {
+          value: result,
+          timestamp: Date.now()
+        };
+        sessionStorage.setItem('creancesPrestations', JSON.stringify(cacheData));
+        
+        // Mettre à jour l'affichage
+        this.updateCreancesPrestationsDisplay(result || 0);
+        return result;
+      }).catch(error => {
+        console.error('Erreur lors du chargement des créances Prestations:', error);
+        this.updateCreancesPrestationsDisplay(0);
+        return 0;
+      });
+      
+      const creancesPrestationsPromise = DbfService.getAbonnesCreancesPrestations(true).then(async result => {
+        // Sauvegarder dans le sessionStorage
+        const cacheData = {
+          value: result,
+          timestamp: Date.now()
+        };
+        sessionStorage.setItem('creancesPrestations', JSON.stringify(cacheData));
+        
+        // Mettre à jour l'affichage
+        this.updateCreancesPrestationsDisplay(result || 0);
+        return result;
+      }).catch(error => {
+        console.error('Erreur lors du chargement des créances Prestations:', error);
+        this.updateCreancesPrestationsDisplay(0);
+        return 0;
+      });
+      
+      // Attendre que les requêtes soient terminées (pour la gestion des erreurs globale)
+      await Promise.all([creancesPromise, creancesResiliesPromise, creancesEauPromise, creancesPrestationsPromise]);
     } catch (error) {
       console.error('Erreur lors du chargement des créances:', error);
       // Les erreurs individuelles sont déjà gérées dans les promesses
@@ -443,6 +489,74 @@ export class ClientsView {
     sessionStorage.setItem('creancesEau', JSON.stringify(cacheData));
     
     return creancesEau;
+  }
+  
+  private async loadCreancesPrestationsData(): Promise<void> {
+    try {
+      // Vérifier si les données sont dans le sessionStorage
+      const cachedData = sessionStorage.getItem('creancesPrestations');
+      if (cachedData) {
+        const data = JSON.parse(cachedData);
+        // Vérifier si les données ne sont pas expirées (5 minutes)
+        if (Date.now() - data.timestamp < 5 * 60 * 1000) {
+          this.updateCreancesPrestationsDisplay(data.value);
+          return;
+        }
+      }
+
+      // Charger les données depuis le service
+      const creancesPrestations = await DbfService.getAbonnesCreancesPrestations();
+      
+      // Sauvegarder dans le sessionStorage
+      const cacheData = {
+        value: creancesPrestations,
+        timestamp: Date.now()
+      };
+      sessionStorage.setItem('creancesPrestations', JSON.stringify(cacheData));
+      
+      // Mettre à jour l'affichage
+      this.updateCreancesPrestationsDisplay(creancesPrestations);
+    } catch (error) {
+      console.error('Erreur lors du chargement des créances Prestations:', error);
+      this.updateCreancesPrestationsDisplay(0);
+    }
+  }
+
+  private async loadCreancesPrestationsDataForce(): Promise<void> {
+    try {
+      // Supprimer les données du cache
+      sessionStorage.removeItem('creancesPrestations');
+      
+      // Charger les données depuis le service en forçant le rafraîchissement
+      const creancesPrestations = await DbfService.getAbonnesCreancesPrestations(true);
+      
+      // Sauvegarder dans le sessionStorage
+      const cacheData = {
+        value: creancesPrestations,
+        timestamp: Date.now()
+      };
+      sessionStorage.setItem('creancesPrestations', JSON.stringify(cacheData));
+      
+      // Mettre à jour l'affichage
+      this.updateCreancesPrestationsDisplay(creancesPrestations);
+    } catch (error) {
+      console.error('Erreur lors du chargement des créances Prestations:', error);
+      this.updateCreancesPrestationsDisplay(0);
+    }
+  }
+
+  private updateCreancesPrestationsDisplay(value: number): void {
+    const creancesPrestationsElement = this.container.querySelector('#creances-prestations-value');
+    if (creancesPrestationsElement) {
+      creancesPrestationsElement.innerHTML = this.formatCurrency(value);
+    }
+  }
+
+  private updateCreancesPrestationsDisplayLoading(): void {
+    const creancesPrestationsElement = this.container.querySelector('#creances-prestations-value');
+    if (creancesPrestationsElement) {
+      creancesPrestationsElement.innerHTML = '<span class="loading-spinner"></span>';
+    }
   }
 
   private updateCreancesDisplayLoading(): void {
