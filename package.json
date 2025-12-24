@@ -17,6 +17,7 @@
     "vite": "^7.2.4"
   },
   "dependencies": {
+    "chart.js": "^4.5.1",
     "concurrently": "^9.2.1",
     "cors": "^2.8.5",
     "dbffile": "^1.12.0",

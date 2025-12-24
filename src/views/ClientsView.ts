@@ -1,9 +1,11 @@
 // ClientsView.ts
 import { DbfService } from '../services/dbfService';
+import Chart from 'chart.js/auto';
 
 export class ClientsView {
   private container: HTMLElement;
-    private creancesEau: number = 0;
+  private creancesEau: number = 0;
+  private creancesChart: Chart<'bar'> | null = null;
 
   constructor() {
     this.container = document.createElement('div');
@@ -59,6 +61,13 @@ export class ClientsView {
           <p class="stat-value" id="creances-prestations-value">
             <span class="loading-spinner"></span>
           </p>
+        </div>
+      </div>
+      
+      <div class="clients-chart-container">
+        <h3>Répartition des Créances par Catégorie</h3>
+        <div class="chart-wrapper">
+          <canvas id="creances-par-categorie-chart"></canvas>
         </div>
       </div>
       
@@ -610,6 +619,7 @@ export class ClientsView {
   }
 
   private updateCreancesParCategorieDisplay(creances: any[]): void {
+    // Mettre à jour le tableau
     const tableBody = this.container.querySelector('#creances-categorie-table tbody');
     if (tableBody) {
       if (creances.length === 0) {
@@ -733,6 +743,57 @@ export class ClientsView {
         tableBody.innerHTML = rows;
       }
     }
+    
+    // Créer ou mettre à jour le graphique
+    if (creances.length > 0) {
+      const categories = creances.map(item => {
+        let categorieLibelle = item.categorie;
+        switch(item.categorie) {
+          case '1':
+            categorieLibelle = 'Cat I';
+            break;
+          case '2':
+            categorieLibelle = 'Cat II';
+            break;
+          case '3':
+            categorieLibelle = 'Cat III';
+            break;
+          case '4':
+            categorieLibelle = 'Cat IV';
+            break;
+          case '15':
+            categorieLibelle = 'Vente en gros';
+            break;
+          case 'Cat III Résiliés':
+            categorieLibelle = 'Cat III Résiliés';
+            break;
+          case 'Cat II Résiliés':
+            categorieLibelle = 'Cat II Résiliés';
+            break;
+          case 'Cat IV Résiliés':
+            categorieLibelle = 'Cat IV Résiliés';
+            break;
+          case 'Cat I Résiliés':
+            categorieLibelle = 'Cat I Résiliés';
+            break;
+          case 'Vente en Gros Résiliés':
+            categorieLibelle = 'Vente en Gros Résiliés';
+            break;
+          case 'Prestations Résiliés':
+            categorieLibelle = 'Prestations Résiliés';
+            break;
+          default:
+            categorieLibelle = item.categorie;
+            break;
+        }
+        return categorieLibelle;
+      });
+      
+      const actifs = creances.map(item => item.montantActifs || 0);
+      const resilies = creances.map(item => item.montantResilies || 0);
+      
+      this.createCreancesChart({ categories, actifs, resilies });
+    }
   }
 
   private formatCurrency(amount: number): string {
@@ -744,6 +805,86 @@ export class ClientsView {
     
     // Retourner le montant avec le symbole DZD en petit
     return `${formattedAmount} <span class="currency-symbol">DZD</span>`;
+  }
+
+  private createCreancesChart(data: { categories: string[]; actifs: number[]; resilies: number[] }): void {
+    const ctx = document.getElementById('creances-par-categorie-chart') as HTMLCanvasElement;
+    if (!ctx) {
+      console.error('Canvas element for chart not found');
+      return;
+    }
+    
+    // Détruire le graphique existant s'il existe
+    if (this.creancesChart) {
+      this.creancesChart.destroy();
+    }
+    
+    this.creancesChart = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: data.categories,
+        datasets: [
+          {
+            label: 'Montant Actifs',
+            data: data.actifs,
+            backgroundColor: 'rgba(54, 162, 235, 0.6)',
+            borderColor: 'rgba(54, 162, 235, 1)',
+            borderWidth: 1
+          },
+          {
+            label: 'Montant Résiliés',
+            data: data.resilies,
+            backgroundColor: 'rgba(255, 99, 132, 0.6)',
+            borderColor: 'rgba(255, 99, 132, 1)',
+            borderWidth: 1
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          y: {
+            beginAtZero: true,
+            ticks: {
+              callback: function(value) {
+                return new Intl.NumberFormat('fr-DZ', {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2
+                }).format(Number(value)) + ' DZD';
+              }
+            },
+            title: {
+              display: true,
+              text: 'Montant (DZD)'
+            }
+          },
+          x: {
+            title: {
+              display: true,
+              text: 'Catégories'
+            }
+          }
+        },
+        plugins: {
+          legend: {
+            position: 'top',
+          },
+          tooltip: {
+            callbacks: {
+              label: function(context) {
+                const label = context.dataset.label || '';
+                const value = context.parsed.y;
+                return `${label}: ${new Intl.NumberFormat('fr-DZ', {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2
+                }).format(Number(value))} DZD`;
+              }
+            }
+          }
+        }
+      }
+    });
   }
 
   public getElement(): HTMLElement {

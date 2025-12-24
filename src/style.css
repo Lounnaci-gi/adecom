@@ -1967,3 +1967,46 @@ tr:hover {
     grid-template-columns: repeat(4, 1fr);
   }
 }
+
+/* Styles pour le conteneur du graphique des créances par catégorie */
+.clients-chart-container {
+  background-color: var(--card-background);
+  border-radius: var(--border-radius);
+  padding: var(--padding-medium);
+  box-shadow: var(--shadow);
+  margin-bottom: var(--padding-medium);
+}
+
+.clients-chart-container h3 {
+  margin-top: 0;
+  margin-bottom: var(--padding-medium);
+  color: var(--primary);
+  text-align: center;
+}
+
+.chart-wrapper {
+  position: relative;
+  height: 400px;
+  width: 100%;
+}
+
+.clients-chart-container {
+  margin-top: var(--padding-medium);
+}
+
+/* Responsive chart */
+@media (max-width: 768px) {
+  .chart-wrapper {
+    height: 300px;
+  }
+  
+  .clients-chart-container {
+    padding: var(--padding-small);
+  }
+}
+
+@media (max-width: 480px) {
+  .chart-wrapper {
+    height: 250px;
+  }
+}
