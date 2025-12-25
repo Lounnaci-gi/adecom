@@ -93,10 +93,11 @@ export class StatistiqueAbonnesView {
     const sortedTypes = [...this.abonnesTypes].sort((a, b) => b.count - a.count);
     const topTypes = sortedTypes.slice(0, 5);
     
-    // Préparer les données pour Chart.js
+    // Préparer les données pour Chart.js avec abonnés actifs et résiliés
     const chartData = {
       labels: topTypes.map(type => `T${type.code}`),
-      counts: topTypes.map(type => type.count)
+      counts: topTypes.map(type => type.count),
+      resilieCounts: topTypes.map(type => type.resilieCount)
     };
     
     // Trier les types d'abonnés selon le critère de tri
@@ -302,7 +303,7 @@ export class StatistiqueAbonnesView {
     });
   }
   
-  private createBarChart(data: { labels: string[]; counts: number[] }): void {
+  private createBarChart(data: { labels: string[]; counts: number[]; resilieCounts: number[] }): void {
     const ctx = document.getElementById('abonnes-type-bar-chart') as HTMLCanvasElement;
     if (!ctx) {
       console.error('Canvas element for bar chart not found');
@@ -318,27 +319,22 @@ export class StatistiqueAbonnesView {
       type: 'bar',
       data: {
         labels: data.labels,
-        datasets: [{
-          label: 'Nombre d\'abonnés',
-          data: data.counts,
-          backgroundColor: [
-            'rgba(75, 192, 192, 0.6)',
-            'rgba(54, 162, 235, 0.6)',
-            'rgba(255, 205, 86, 0.6)',
-            'rgba(255, 99, 132, 0.6)',
-            'rgba(153, 102, 255, 0.6)',
-            'rgba(255, 159, 64, 0.6)'
-          ],
-          borderColor: [
-            'rgba(75, 192, 192, 1)',
-            'rgba(54, 162, 235, 1)',
-            'rgba(255, 205, 86, 1)',
-            'rgba(255, 99, 132, 1)',
-            'rgba(153, 102, 255, 1)',
-            'rgba(255, 159, 64, 1)'
-          ],
-          borderWidth: 1
-        }]
+        datasets: [
+          {
+            label: 'Nombre d\'abonnés actifs',
+            data: data.counts,
+            backgroundColor: 'rgba(75, 192, 192, 0.6)',
+            borderColor: 'rgba(75, 192, 192, 1)',
+            borderWidth: 1
+          },
+          {
+            label: 'Nombre d\'abonnés résiliés',
+            data: data.resilieCounts,
+            backgroundColor: 'rgba(255, 99, 132, 0.6)',
+            borderColor: 'rgba(255, 99, 132, 1)',
+            borderWidth: 1
+          }
+        ]
       },
       options: {
         responsive: true,
