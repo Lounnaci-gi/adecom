@@ -1429,6 +1429,88 @@ app.get('/api/abonnes/creances-par-categorie', async (req, res) => {
   }
 });
 
+// API endpoint pour récupérer les créances par date
+app.get('/api/abonnes/creances-by-date', async (req, res) => {
+  try {
+    const { date } = req.query;
+    
+    if (!date || typeof date !== 'string') {
+      return res.status(400).json({ 
+        error: 'Paramètre date requis au format yyyymmdd' 
+      });
+    }
+    
+    // Vérifier que la date est au format yyyymmdd
+    if (!/^[0-9]{8}$/.test(date)) {
+      return res.status(400).json({ 
+        error: 'Format de date invalide. Utilisez yyyymmdd (ex: 20250630)' 
+      });
+    }
+    
+    const startTime = Date.now();
+    
+    // Requête: Select Sum("FACTURES.DBF".MONTTC) As Sum_MONTTC From "FACTURES.DBF" Where "FACTURES.DBF".DATFACT <= date And ("FACTURES.DBF".DATREG >= date Or "FACTURES.DBF".DATREG = '') And "FACTURES.DBF".TYPABON In ('10', '11', '12', '17')
+    
+    // Formater la date cible pour la comparaison
+    const targetDate = new Date(
+      parseInt(date.substring(0, 4)),   // année
+      parseInt(date.substring(4, 6)) - 1, // mois (0-indexed)
+      parseInt(date.substring(6, 8))     // jour
+    );
+    
+    const targetDateFormatted = targetDate.toISOString().split('T')[0].replace(/-/g, '');
+    
+    // Pour optimiser l'utilisation mémoire, nous allons utiliser une requête SUM directe
+    // Puisque les opérateurs IN et != ne sont pas supportés, nous devons charger les données et filtrer côté serveur
+    
+    // Calculer les montants actifs et résiliés pour chaque type d'abonné
+    let totalActifs = 0;
+    let totalResilies = 0;
+    
+    // Traiter chaque type d'abonné séparément
+    const typesAbonnes = ['10', '11', '12', '17'];
+    
+    for (const typeAbonne of typesAbonnes) {
+      // Charger les données pour ce type d'abonné sans la condition !=
+      const sqlQuery = `SELECT MONTTC, DATREG FROM FACTURES WHERE TYPABON = '${typeAbonne}' AND DATFACT <= '${targetDateFormatted}'`;
+      const result = await dbfSqlService.executeSelectQuery(sqlQuery);
+      
+      result.rows.forEach(row => {
+        const montant = parseFloat(row.MONTTC) || 0;
+        const datreg = row.DATREG || row.datreg || '';
+        
+        // Vérifier si DATREG >= date ou DATREG est vide (actif)
+        if (datreg === '' || (datreg && datreg >= targetDateFormatted)) {
+          totalActifs += montant;
+        } 
+        // Sinon, si DATREG < date et DATREG n'est pas vide (résilié)
+        else if (datreg && datreg < targetDateFormatted) {
+          totalResilies += montant;
+        }
+      });
+    }
+    
+    const executionTime = Date.now() - startTime;
+    
+    res.json({
+      creances: [
+        {
+          categorie: 'Cat 1',
+          actifs: totalActifs,
+          resilies: totalResilies
+        }
+      ],
+      executionTime: executionTime
+    });
+  } catch (error) {
+    console.error('Erreur lors du calcul des créances par date:', error);
+    res.status(500).json({ 
+      error: 'Erreur serveur lors du calcul des créances par date',
+      message: (error as Error).message
+    });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`Serveur DBF démarré sur http://localhost:${PORT}`);
   console.log(`Dossier DBF: ${DBF_FOLDER_PATH}`);

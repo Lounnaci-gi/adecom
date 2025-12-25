@@ -1,5 +1,5 @@
 // dbfService.ts
-import { getDbfFiles, getCentresCount, getAbonnesCount, getAbonnesCountByType, getAbonnesCompteurArret, getAbonnesSansCompteur, updateDbfPath, getDbfPath, getCentresList, saveCentreToEnv, getAbonnesCreances, getAbonnesCreancesResilies, getAbonnesCreancesEau, getAbonnesCreancesParCategorie, getAbonnesCreancesPrestations, refreshServerCache } from '../api';
+import { getDbfFiles, getCentresCount, getAbonnesCount, getAbonnesCountByType, getAbonnesCompteurArret, getAbonnesSansCompteur, updateDbfPath, getDbfPath, getCentresList, saveCentreToEnv, getAbonnesCreances, getAbonnesCreancesResilies, getAbonnesCreancesEau, getAbonnesCreancesParCategorie, getAbonnesCreancesPrestations, refreshServerCache, getCreancesByDate } from '../api';
 import { dbfConfig } from '../database/dbfConnection';
 
 /**
@@ -341,7 +341,22 @@ export class DbfService {
       return [];
     }
   }
-
+  
+  /**
+   * Récupère les créances par date pour la catégorie Cat 1
+   * @param date Date au format yyyymmdd
+   */
+  static async getCreancesByDate(date: string) {
+    try {
+      const result = await getCreancesByDate(date);
+      return result.creances || [];
+    } catch (error) {
+      console.error('Erreur lors de la récupération des créances par date:', error);
+      // Retourner un tableau vide en cas d'erreur
+      return [];
+    }
+  }
+  
   /**
    * Récupère le chemin actuel du dossier DBF
    */

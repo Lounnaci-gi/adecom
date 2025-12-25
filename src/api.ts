@@ -304,3 +304,20 @@ export async function getAbonnesCreancesParCategorie(forceRefresh: boolean = fal
     throw error;
   }
 }
+
+/**
+ * Récupère les créances par date pour la catégorie Cat 1
+ * @param date Date au format yyyymmdd
+ */
+export async function getCreancesByDate(date: string) {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/abonnes/creances-by-date?date=${date}`);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('Erreur lors de la récupération des créances par date:', error);
+    throw error;
+  }
+}

@@ -92,10 +92,41 @@ export class ClientsView {
           </tbody>
         </table>
       </div>
-
-    `;
+      
+      <div class="creances-date-container" id="creances-par-date-container">
+        <h3>Créances par Date</h3>
+        <div class="creances-date-content">
+          <div class="date-controls">
+            <label for="creances-date">Sélectionner une date:</label>
+            <div class="input-group">
+              <input type="date" id="creances-date" class="form-control">
+              <button id="creances-date-submit" class="btn btn-primary">Exécuter</button>
+            </div>
+          </div>
+          <div class="creances-date-table-container">
+            <table class="creances-date-table" id="creances-date-table">
+              <thead>
+                <tr>
+                  <th>Catégorie</th>
+                  <th>Actifs</th>
+                  <th>Résiliés</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td colspan="3" class="text-center">
+                    <em>Sélectionnez une date et cliquez sur "Exécuter" pour afficher les créances</em>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      
+      `;
   }
-
+  
   private async loadCreancesData(): Promise<void> {
     try {
       // Vérifier si les données sont dans le sessionStorage
@@ -794,6 +825,29 @@ export class ClientsView {
       
       this.createCreancesChart({ categories, actifs, resilies });
     }
+    
+    
+    // Ajouter un gestionnaire d'événements pour le bouton Exécuter
+    const submitButton = this.container.querySelector('#creances-date-submit') as HTMLButtonElement;
+    if (submitButton) {
+      submitButton.addEventListener('click', () => {
+        const dateInput = this.container.querySelector('#creances-date') as HTMLInputElement;
+        if (dateInput && dateInput.value) {
+          this.loadCreancesByDate(dateInput.value);
+        }
+      });
+    }
+    
+    // Optionnellement, garder aussi le gestionnaire de changement de date
+    const dateInput = this.container.querySelector('#creances-date') as HTMLInputElement;
+    if (dateInput) {
+      dateInput.addEventListener('change', (e) => {
+        const selectedDate = (e.target as HTMLInputElement).value;
+        if (selectedDate) {
+          this.loadCreancesByDate(selectedDate);
+        }
+      });
+    }
   }
 
   private formatCurrency(amount: number): string {
@@ -885,6 +939,69 @@ export class ClientsView {
         }
       }
     });
+  }
+  
+  private async loadCreancesByDate(date: string): Promise<void> {
+    try {
+      // Afficher un indicateur de chargement dans le tableau
+      const tableBody = this.container.querySelector('#creances-date-table tbody');
+      if (tableBody) {
+        tableBody.innerHTML = `
+          <tr>
+            <td colspan="3" class="text-center">
+              <span class="loading-spinner"></span>
+            </td>
+          </tr>
+        `;
+      }
+      
+      // Formater la date au format yyyymmdd
+      const formattedDate = date.replace(/-/g, '');
+      
+      // Appeler le service pour récupérer les créances par date
+      const creances = await DbfService.getCreancesByDate(formattedDate);
+      
+      // Mettre à jour l'affichage du tableau
+      this.updateCreancesByDateTable(creances);
+    } catch (error) {
+      console.error('Erreur lors du chargement des créances par date:', error);
+      
+      // Afficher un message d'erreur dans le tableau
+      const tableBody = this.container.querySelector('#creances-date-table tbody');
+      if (tableBody) {
+        tableBody.innerHTML = `
+          <tr>
+            <td colspan="3" class="text-center text-danger">Erreur de chargement</td>
+          </tr>
+        `;
+      }
+    }
+  }
+  
+  private updateCreancesByDateTable(creances: any[]): void {
+    const tableBody = this.container.querySelector('#creances-date-table tbody');
+    if (tableBody) {
+      if (creances.length === 0) {
+        tableBody.innerHTML = `
+          <tr>
+            <td colspan="3" class="text-center">Aucune donnée disponible</td>
+          </tr>
+        `;
+      } else {
+        let rows = '';
+        creances.forEach(item => {
+          rows += `
+            <tr>
+              <td>${item.categorie}</td>
+              <td>${this.formatCurrency(item.actifs || 0)}</td>
+              <td>${this.formatCurrency(item.resilies || 0)}</td>
+            </tr>
+          `;
+        });
+        
+        tableBody.innerHTML = rows;
+      }
+    }
   }
 
   public getElement(): HTMLElement {
