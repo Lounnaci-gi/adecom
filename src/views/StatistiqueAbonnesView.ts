@@ -1,5 +1,6 @@
 // StatistiqueAbonnesView.ts
 import { DbfService } from '../services/dbfService';
+import Chart from 'chart.js/auto';
 
 interface AbonneType {
   code: string;
@@ -17,6 +18,7 @@ export class StatistiqueAbonnesView {
   private totalResilieCount: number = 0;
   private compteurArretCount: number = 0;
   private sansCompteurCount: number = 0;
+  private barChart: Chart<'bar'> | null = null;
 
   private abonnesTypes: AbonneType[] = [];
   private sortBy: string = 'count';
@@ -91,61 +93,11 @@ export class StatistiqueAbonnesView {
     const sortedTypes = [...this.abonnesTypes].sort((a, b) => b.count - a.count);
     const topTypes = sortedTypes.slice(0, 5);
     
-    // Créer le graphique à barres SVG
-    let barChartSvg = '';
-    let chartLegend = '';
-    
-    const colors = ['#4CAF50', '#2196F3', '#FFC107', '#FF5722', '#9C27B0'];
-    const barWidth = 30;
-    const barSpacing = 50;
-    const chartHeight = 200;
-    const chartWidth = 300;
-    const maxValue = Math.max(...topTypes.map(t => t.count), 1);
-    
-    // Créer les barres
-    topTypes.forEach((type, index) => {
-      const percentage = this.totalCount > 0 ? (type.count / this.totalCount) * 100 : 0;
-      const barHeight = (type.count / maxValue) * 150;
-      const x = index * barSpacing + 20;
-      const y = chartHeight - barHeight - 20;
-      const color = colors[index];
-      
-      // Créer la barre
-      barChartSvg += `
-        <rect 
-          x="${x}" 
-          y="${y}" 
-          width="${barWidth}" 
-          height="${barHeight}" 
-          fill="${color}"
-        />
-        <text 
-          x="${x + barWidth/2}" 
-          y="${chartHeight - 5}" 
-          text-anchor="middle" 
-          font-size="10" 
-          fill="#333"
-        >
-          T${type.code}
-        </text>
-        <text 
-          x="${x + barWidth/2}" 
-          y="${y - 5}" 
-          text-anchor="middle" 
-          font-size="10" 
-          fill="#333"
-        >
-          ${type.count}
-        </text>
-      `;
-      
-      chartLegend += `
-        <li>
-          <span class="legend-color" style="background-color: ${color};"></span>
-          ${type.designation} (${percentage.toFixed(1)}%)
-        </li>
-      `;
-    });
+    // Préparer les données pour Chart.js
+    const chartData = {
+      labels: topTypes.map(type => `T${type.code}`),
+      counts: topTypes.map(type => type.count)
+    };
     
     // Trier les types d'abonnés selon le critère de tri
     const sortedAbonnesTypes = [...this.abonnesTypes].sort((a, b) => {
@@ -272,15 +224,8 @@ export class StatistiqueAbonnesView {
         
         <div class="chart-container">
           <h3>Répartition par Type d'Abonné</h3>
-          <div class="chart-placeholder">
-            <div class="bar-chart-container">
-              <svg width="300" height="200" viewBox="0 0 300 200" class="bar-chart">
-                ${barChartSvg}
-              </svg>
-            </div>
-            <ul class="chart-legend">
-              ${chartLegend}
-            </ul>
+          <div class="chart-wrapper">
+            <canvas id="abonnes-type-bar-chart"></canvas>
           </div>
         </div>
         
@@ -307,6 +252,9 @@ export class StatistiqueAbonnesView {
         </div>
       </div>
     `;
+    
+    // Créer ou mettre à jour le graphique à barres
+    this.createBarChart(chartData);
   }
 
   private render(): void {
@@ -351,6 +299,80 @@ export class StatistiqueAbonnesView {
           this.updateDisplay();
         }
       });
+    });
+  }
+  
+  private createBarChart(data: { labels: string[]; counts: number[] }): void {
+    const ctx = document.getElementById('abonnes-type-bar-chart') as HTMLCanvasElement;
+    if (!ctx) {
+      console.error('Canvas element for bar chart not found');
+      return;
+    }
+    
+    // Détruire le graphique existant s'il existe
+    if (this.barChart) {
+      this.barChart.destroy();
+    }
+    
+    this.barChart = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: data.labels,
+        datasets: [{
+          label: 'Nombre d\'abonnés',
+          data: data.counts,
+          backgroundColor: [
+            'rgba(75, 192, 192, 0.6)',
+            'rgba(54, 162, 235, 0.6)',
+            'rgba(255, 205, 86, 0.6)',
+            'rgba(255, 99, 132, 0.6)',
+            'rgba(153, 102, 255, 0.6)',
+            'rgba(255, 159, 64, 0.6)'
+          ],
+          borderColor: [
+            'rgba(75, 192, 192, 1)',
+            'rgba(54, 162, 235, 1)',
+            'rgba(255, 205, 86, 1)',
+            'rgba(255, 99, 132, 1)',
+            'rgba(153, 102, 255, 1)',
+            'rgba(255, 159, 64, 1)'
+          ],
+          borderWidth: 1
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          y: {
+            beginAtZero: true,
+            title: {
+              display: true,
+              text: 'Nombre d\'abonnés'
+            }
+          },
+          x: {
+            title: {
+              display: true,
+              text: 'Type d\'abonné'
+            }
+          }
+        },
+        plugins: {
+          legend: {
+            position: 'top',
+          },
+          tooltip: {
+            callbacks: {
+              label: function(context) {
+                const label = context.dataset.label || '';
+                const value = context.parsed.y;
+                return `${label}: ${Number(value).toLocaleString()}`;
+              }
+            }
+          }
+        }
+      }
     });
   }
 }
